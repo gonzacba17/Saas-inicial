@@ -4,7 +4,7 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: saas_inicial
+      POSTGRES_DB: cafeteria_ia
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -28,7 +28,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/saas_inicial
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/cafeteria_ia
       - SECRET_KEY=your-secret-key-here
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - MERCADOPAGO_KEY=${MERCADOPAGO_KEY}
@@ -42,14 +42,14 @@ services:
 
   frontend:
     build:
-      context: ./cafe-frontend
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
-      - ./cafe-frontend:/app
+      - ./frontend:/app
       - /app/node_modules
     networks:
       - saas_network

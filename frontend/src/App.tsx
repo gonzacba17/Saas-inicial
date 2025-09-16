@@ -1,58 +1,64 @@
-import React, { useState, useEffect } from 'react';
-import { LoginForm } from './components/LoginForm';
-import { RegisterForm } from './components/RegisterForm';
-import { Dashboard } from './components/Dashboard';
-
-type ViewType = 'login' | 'register' | 'dashboard';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './store/authStore';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Cafes } from './pages/Cafes';
+import { CafeDetail } from './pages/CafeDetail';
+import { Checkout } from './pages/Checkout';
 
 function App() {
-  const [currentView, setCurrentView] = useState<ViewType>('login');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, token } = useAuthStore();
 
+  // Initialize auth state from localStorage on app start
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      setIsAuthenticated(true);
-      setCurrentView('dashboard');
+    const storedToken = localStorage.getItem('access_token');
+    if (storedToken && !token) {
+      // Token exists but store is not initialized
+      // This could be improved with a proper token validation
     }
-  }, []);
-
-  const handleLogin = (token: string) => {
-    setIsAuthenticated(true);
-    setCurrentView('dashboard');
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentView('login');
-    localStorage.removeItem('access_token');
-  };
-
-  const handleRegister = () => {
-    setCurrentView('login');
-  };
-
-  const switchToLogin = () => setCurrentView('login');
-  const switchToRegister = () => setCurrentView('register');
-
-  if (currentView === 'dashboard' && isAuthenticated) {
-    return <Dashboard onLogout={handleLogout} />;
-  }
-
-  if (currentView === 'register') {
-    return (
-      <RegisterForm
-        onRegister={handleRegister}
-        onSwitchToLogin={switchToLogin}
-      />
-    );
-  }
+  }, [token]);
 
   return (
-    <LoginForm
-      onLogin={handleLogin}
-      onSwitchToRegister={switchToRegister}
-    />
+    <Router>
+      <Routes>
+        {/* Public routes */}
+        <Route 
+          path="/login" 
+          element={!isAuthenticated ? <Login /> : <Navigate to="/cafes" />} 
+        />
+        <Route 
+          path="/register" 
+          element={!isAuthenticated ? <Register /> : <Navigate to="/cafes" />} 
+        />
+        
+        {/* Protected routes */}
+        <Route 
+          path="/cafes" 
+          element={isAuthenticated ? <Cafes /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/cafes/:cafeId" 
+          element={isAuthenticated ? <CafeDetail /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/checkout" 
+          element={isAuthenticated ? <Checkout /> : <Navigate to="/login" />} 
+        />
+        
+        {/* Default redirect */}
+        <Route 
+          path="/" 
+          element={<Navigate to={isAuthenticated ? "/cafes" : "/login"} />} 
+        />
+        
+        {/* Catch all route */}
+        <Route 
+          path="*" 
+          element={<Navigate to={isAuthenticated ? "/cafes" : "/login"} />} 
+        />
+      </Routes>
+    </Router>
   );
 }
 

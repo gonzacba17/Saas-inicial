@@ -39,7 +39,7 @@ class ApiService {
     formData.append('username', credentials.username);
     formData.append('password', credentials.password);
 
-    const response = await fetch(`${this.baseURL}/api/v1/auth/token`, {
+    const response = await fetch(`${this.baseURL}/api/v1/auth/login`, {
       method: 'POST',
       body: formData,
     });
