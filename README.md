@@ -2,12 +2,12 @@
 
 **Plataforma SaaS unificada y simplificada para desarrollo local**
 
-Proyecto limpio y consolidado que evolucionó de "Cafetería IA" hacia una solución SaaS modular. **Diseñado para funcionar 100% local sin Docker ni Git**, con toda la funcionalidad unificada en archivos simples y manejables.
+Proyecto limpio y consolidado que evolucionó hacia una solución SaaS modular y adaptable para múltiples tipos de negocio. **Diseñado para funcionar 100% local sin Docker ni Git**, con toda la funcionalidad unificada en archivos simples y manejables.
 
 ## 📁 Estructura Simplificada
 
 ```
-cafeteria-ia/
+modularbiz-saas/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/users.py        # 🔥 TODOS los endpoints unificados
@@ -49,7 +49,7 @@ cafeteria-ia/
 
 ```bash
 # Ir al directorio del proyecto
-cd cafeteria-ia
+cd modularbiz-saas
 
 # Crear archivos de configuración
 # Backend: crear backend/.env con las variables necesarias

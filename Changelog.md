@@ -26,7 +26,7 @@ Proyecto unificado y simplificado para desarrollo local sin Docker ni Git.
 
 ### ✅ **Estructura Final Limpia**
 ```
-cafeteria-ia/
+modularbiz-saas/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/users.py        # Todos los endpoints
