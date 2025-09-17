@@ -6,6 +6,8 @@ import { Register } from './pages/Register';
 import { Businesses } from './pages/Businesses';
 import { BusinessDetail } from './pages/BusinessDetail';
 import { Checkout } from './pages/Checkout';
+import { Orders } from './pages/Orders';
+import { BusinessDashboard } from './pages/BusinessDashboard';
 
 function App() {
   const { isAuthenticated, token } = useAuthStore();
@@ -44,6 +46,14 @@ function App() {
         <Route 
           path="/checkout" 
           element={isAuthenticated ? <Checkout /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/orders" 
+          element={isAuthenticated ? <Orders /> : <Navigate to="/login" />} 
+        />
+        <Route 
+          path="/businesses/:businessId/dashboard" 
+          element={isAuthenticated ? <BusinessDashboard /> : <Navigate to="/login" />} 
         />
         
         {/* Default redirect */}

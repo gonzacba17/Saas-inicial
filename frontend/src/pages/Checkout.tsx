@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
+import { apiService } from '../services/api';
+import { OrderCreate } from '../types/order';
 
 export const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { items, total, clearCart, removeItem, updateQuantity } = useCartStore();
   const { user, logout } = useAuthStore();
@@ -21,14 +24,37 @@ export const Checkout: React.FC = () => {
   };
 
   const handlePlaceOrder = async () => {
-    setLoading(true);
+    if (items.length === 0) return;
     
-    // Simulate order placement
-    setTimeout(() => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get business_id from first item (all items should be from same business)
+      const business_id = items[0].product.business_id;
+      
+      // Create order payload
+      const orderData: OrderCreate = {
+        business_id,
+        notes: notes.trim() || undefined,
+        items: items.map(item => ({
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.product.price
+        }))
+      };
+
+      // Create order via API
+      await apiService.createOrder(orderData);
+      
       setOrderPlaced(true);
       clearCart();
+    } catch (err) {
+      console.error('Error placing order:', err);
+      setError(err instanceof Error ? err.message : 'Failed to place order');
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   const handleLogout = () => {
@@ -45,12 +71,20 @@ export const Checkout: React.FC = () => {
           <p className="text-gray-600 mb-6">
             Your order has been successfully placed. You will receive a confirmation soon.
           </p>
-          <button
-            onClick={() => navigate('/cafes')}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
-          >
-            Continue Shopping
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/orders')}
+              className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium"
+            >
+              View My Orders
+            </button>
+            <button
+              onClick={() => navigate('/businesses')}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md font-medium"
+            >
+              Continue Shopping
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -64,10 +98,10 @@ export const Checkout: React.FC = () => {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/cafes')}
+                onClick={() => navigate('/businesses')}
                 className="text-gray-600 hover:text-gray-900"
               >
-                ← Back to Cafes
+                ← Back to Businesses
               </button>
               <h1 className="text-xl font-semibold text-gray-900">Checkout</h1>
             </div>
@@ -91,13 +125,13 @@ export const Checkout: React.FC = () => {
               <div className="text-gray-400 text-6xl mb-4">🛒</div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
               <p className="text-gray-600 mb-6">
-                Add some delicious items from our cafes to get started!
+                Add some delicious items from our businesses to get started!
               </p>
               <button
-                onClick={() => navigate('/cafes')}
+                onClick={() => navigate('/businesses')}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-md font-medium"
               >
-                Browse Cafes
+                Browse Businesses
               </button>
             </div>
           ) : (
@@ -200,9 +234,15 @@ export const Checkout: React.FC = () => {
                       />
                     </div>
 
+                    {error && (
+                      <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                        {error}
+                      </div>
+                    )}
+
                     <button
                       onClick={handlePlaceOrder}
-                      disabled={loading}
+                      disabled={loading || items.length === 0}
                       className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white px-4 py-3 rounded-md font-medium"
                     >
                       {loading ? 'Placing Order...' : 'Place Order'}

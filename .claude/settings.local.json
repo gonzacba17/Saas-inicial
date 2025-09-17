@@ -20,7 +20,8 @@
       "Bash(true)",
       "Bash(mv:*)",
       "Bash(ls:*)",
-      "Bash(python -m alembic revision:*)"
+      "Bash(python -m alembic revision:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }

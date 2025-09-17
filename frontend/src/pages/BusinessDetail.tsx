@@ -2,24 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
+import { apiService } from '../services/api';
+import { Business, Product } from '../types/business';
 
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image_url?: string;
-  business_id: string;
-}
-
-interface Business {
-  id: string;
-  name: string;
-  description: string;
-  address: string;
-  business_type: string;
-}
 
 export const BusinessDetail: React.FC = () => {
   const { businessId } = useParams<{ businessId: string }>();

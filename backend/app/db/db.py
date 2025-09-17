@@ -28,6 +28,17 @@ class OrderStatus(enum.Enum):
     DELIVERED = "delivered"
     CANCELLED = "cancelled"
 
+class UserBusinessRole(enum.Enum):
+    OWNER = "owner"
+    MANAGER = "manager"
+    EMPLOYEE = "employee"
+
+class AIAssistantType(enum.Enum):
+    PRODUCT_SUGGESTION = "product_suggestion"
+    SALES_ANALYSIS = "sales_analysis"
+    BUSINESS_INSIGHTS = "business_insights"
+    GENERAL_QUERY = "general_query"
+
 # ========================================
 # DATABASE MODELS
 # ========================================
@@ -46,6 +57,7 @@ class User(Base):
     
     # Relationships
     orders = relationship("Order", back_populates="user")
+    business_associations = relationship("UserBusiness", back_populates="user")
 
 class Business(Base):
     __tablename__ = "businesses"
@@ -64,6 +76,7 @@ class Business(Base):
     # Relationships
     products = relationship("Product", back_populates="business")
     orders = relationship("Order", back_populates="business")
+    user_associations = relationship("UserBusiness", back_populates="business")
 
 class Product(Base):
     __tablename__ = "products"
@@ -113,6 +126,38 @@ class OrderItem(Base):
     # Relationships
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
+
+class UserBusiness(Base):
+    __tablename__ = "user_businesses"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
+    role = Column(Enum(UserBusinessRole), default=UserBusinessRole.OWNER)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="business_associations")
+    business = relationship("Business", back_populates="user_associations")
+
+class AIConversation(Base):
+    __tablename__ = "ai_conversations"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=True)
+    assistant_type = Column(Enum(AIAssistantType), nullable=False)
+    prompt = Column(Text, nullable=False)
+    response = Column(Text, nullable=False)
+    tokens_used = Column(Integer, default=0)
+    response_time_ms = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    business = relationship("Business")
 
 # ========================================
 # DATABASE CONNECTION
@@ -277,3 +322,319 @@ class ProductCRUD:
             db_product.is_available = False
             db.commit()
         return db_product
+
+class UserBusinessCRUD:
+    """Basic CRUD operations for UserBusiness model."""
+    
+    @staticmethod
+    def create(db, user_business_data):
+        """Create a new user-business association."""
+        db_user_business = UserBusiness(**user_business_data)
+        db.add(db_user_business)
+        db.commit()
+        db.refresh(db_user_business)
+        return db_user_business
+    
+    @staticmethod
+    def get_by_user_and_business(db, user_id, business_id):
+        """Get user-business association by user and business ID."""
+        return db.query(UserBusiness).filter(
+            UserBusiness.user_id == user_id,
+            UserBusiness.business_id == business_id,
+            UserBusiness.is_active == True
+        ).first()
+    
+    @staticmethod
+    def get_user_businesses(db, user_id):
+        """Get all businesses for a user."""
+        return db.query(UserBusiness).filter(
+            UserBusiness.user_id == user_id,
+            UserBusiness.is_active == True
+        ).all()
+    
+    @staticmethod
+    def get_business_users(db, business_id):
+        """Get all users for a business."""
+        return db.query(UserBusiness).filter(
+            UserBusiness.business_id == business_id,
+            UserBusiness.is_active == True
+        ).all()
+    
+    @staticmethod
+    def is_user_owner(db, user_id, business_id):
+        """Check if user is owner of business."""
+        association = db.query(UserBusiness).filter(
+            UserBusiness.user_id == user_id,
+            UserBusiness.business_id == business_id,
+            UserBusiness.role == UserBusinessRole.OWNER,
+            UserBusiness.is_active == True
+        ).first()
+        return association is not None
+    
+    @staticmethod
+    def has_permission(db, user_id, business_id, required_roles=None):
+        """Check if user has permission to access business."""
+        if required_roles is None:
+            required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+        
+        association = db.query(UserBusiness).filter(
+            UserBusiness.user_id == user_id,
+            UserBusiness.business_id == business_id,
+            UserBusiness.role.in_(required_roles),
+            UserBusiness.is_active == True
+        ).first()
+        return association is not None
+    
+    @staticmethod
+    def delete(db, user_id, business_id):
+        """Remove user-business association."""
+        db_user_business = db.query(UserBusiness).filter(
+            UserBusiness.user_id == user_id,
+            UserBusiness.business_id == business_id
+        ).first()
+        if db_user_business:
+            db_user_business.is_active = False
+            db.commit()
+        return db_user_business
+
+class OrderCRUD:
+    """Basic CRUD operations for Order model."""
+    
+    @staticmethod
+    def create(db, order_data):
+        """Create a new order."""
+        db_order = Order(**order_data)
+        db.add(db_order)
+        db.commit()
+        db.refresh(db_order)
+        return db_order
+    
+    @staticmethod
+    def get_by_id(db, order_id):
+        """Get order by ID."""
+        return db.query(Order).filter(Order.id == order_id).first()
+    
+    @staticmethod
+    def get_user_orders(db, user_id, skip=0, limit=100):
+        """Get all orders for a user."""
+        return db.query(Order).filter(Order.user_id == user_id).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_business_orders(db, business_id, skip=0, limit=100):
+        """Get all orders for a business."""
+        return db.query(Order).filter(Order.business_id == business_id).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def update_status(db, order_id, new_status):
+        """Update order status."""
+        db_order = db.query(Order).filter(Order.id == order_id).first()
+        if db_order:
+            db_order.status = new_status
+            db.commit()
+            db.refresh(db_order)
+        return db_order
+    
+    @staticmethod
+    def calculate_total(db, order_items):
+        """Calculate total amount for order items."""
+        total = 0
+        for item in order_items:
+            total += item.get("quantity", 1) * item.get("unit_price", 0)
+        return total
+
+class OrderItemCRUD:
+    """Basic CRUD operations for OrderItem model."""
+    
+    @staticmethod
+    def create(db, order_item_data):
+        """Create a new order item."""
+        db_order_item = OrderItem(**order_item_data)
+        db.add(db_order_item)
+        db.commit()
+        db.refresh(db_order_item)
+        return db_order_item
+    
+    @staticmethod
+    def get_by_order(db, order_id):
+        """Get all items for an order."""
+        return db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
+    
+    @staticmethod
+    def create_bulk(db, order_items_data):
+        """Create multiple order items at once."""
+        order_items = []
+        for item_data in order_items_data:
+            db_order_item = OrderItem(**item_data)
+            db.add(db_order_item)
+            order_items.append(db_order_item)
+        db.commit()
+        for item in order_items:
+            db.refresh(item)
+        return order_items
+
+class AnalyticsCRUD:
+    """Analytics and statistics operations."""
+    
+    @staticmethod
+    def get_business_analytics(db, business_id):
+        """Get analytics for a specific business."""
+        from sqlalchemy import func, and_
+        
+        # Basic business stats
+        total_orders = db.query(func.count(Order.id)).filter(Order.business_id == business_id).scalar()
+        total_revenue = db.query(func.sum(Order.total_amount)).filter(Order.business_id == business_id).scalar() or 0
+        
+        # Orders by status
+        pending_orders = db.query(func.count(Order.id)).filter(
+            and_(Order.business_id == business_id, Order.status == OrderStatus.PENDING)
+        ).scalar()
+        
+        completed_orders = db.query(func.count(Order.id)).filter(
+            and_(Order.business_id == business_id, Order.status == OrderStatus.DELIVERED)
+        ).scalar()
+        
+        # Top products by quantity sold
+        top_products = db.query(
+            Product.id,
+            Product.name,
+            func.sum(OrderItem.quantity).label('total_quantity'),
+            func.sum(OrderItem.total_price).label('total_revenue')
+        ).join(OrderItem, Product.id == OrderItem.product_id)\
+         .join(Order, OrderItem.order_id == Order.id)\
+         .filter(Order.business_id == business_id)\
+         .group_by(Product.id, Product.name)\
+         .order_by(func.sum(OrderItem.quantity).desc())\
+         .limit(5).all()
+        
+        return {
+            "business_id": business_id,
+            "total_orders": total_orders,
+            "total_revenue": float(total_revenue),
+            "pending_orders": pending_orders,
+            "completed_orders": completed_orders,
+            "top_products": [
+                {
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "total_quantity": int(product.total_quantity),
+                    "total_revenue": float(product.total_revenue)
+                }
+                for product in top_products
+            ]
+        }
+    
+    @staticmethod
+    def get_date_range_stats(db, business_id, start_date, end_date):
+        """Get statistics for a date range."""
+        from sqlalchemy import func, and_
+        
+        orders_in_range = db.query(Order).filter(
+            and_(
+                Order.business_id == business_id,
+                Order.created_at >= start_date,
+                Order.created_at <= end_date
+            )
+        ).all()
+        
+        total_orders = len(orders_in_range)
+        total_revenue = sum(order.total_amount for order in orders_in_range)
+        average_order_value = total_revenue / total_orders if total_orders > 0 else 0
+        
+        return {
+            "start_date": start_date,
+            "end_date": end_date,
+            "total_orders": total_orders,
+            "total_revenue": float(total_revenue),
+            "average_order_value": float(average_order_value)
+        }
+    
+    @staticmethod
+    def get_daily_sales(db, business_id, days=30):
+        """Get daily sales for the last N days."""
+        from sqlalchemy import func, and_
+        from datetime import datetime, timedelta
+        
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=days)
+        
+        daily_stats = db.query(
+            func.date(Order.created_at).label('date'),
+            func.count(Order.id).label('orders'),
+            func.sum(Order.total_amount).label('revenue')
+        ).filter(
+            and_(
+                Order.business_id == business_id,
+                Order.created_at >= start_date,
+                Order.created_at <= end_date
+            )
+        ).group_by(func.date(Order.created_at))\
+         .order_by(func.date(Order.created_at)).all()
+        
+        return [
+            {
+                "date": stat.date.isoformat(),
+                "orders": stat.orders,
+                "revenue": float(stat.revenue or 0)
+            }
+            for stat in daily_stats
+        ]
+
+class AIConversationCRUD:
+    """CRUD operations for AI conversations."""
+    
+    @staticmethod
+    def create(db, conversation_data):
+        """Create a new AI conversation record."""
+        db_conversation = AIConversation(**conversation_data)
+        db.add(db_conversation)
+        db.commit()
+        db.refresh(db_conversation)
+        return db_conversation
+    
+    @staticmethod
+    def get_by_id(db, conversation_id):
+        """Get conversation by ID."""
+        return db.query(AIConversation).filter(AIConversation.id == conversation_id).first()
+    
+    @staticmethod
+    def get_user_conversations(db, user_id, skip=0, limit=100):
+        """Get all conversations for a user."""
+        return db.query(AIConversation).filter(
+            AIConversation.user_id == user_id
+        ).order_by(AIConversation.created_at.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_business_conversations(db, business_id, skip=0, limit=100):
+        """Get all conversations for a business."""
+        return db.query(AIConversation).filter(
+            AIConversation.business_id == business_id
+        ).order_by(AIConversation.created_at.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_by_type(db, user_id, assistant_type, skip=0, limit=50):
+        """Get conversations by assistant type."""
+        return db.query(AIConversation).filter(
+            AIConversation.user_id == user_id,
+            AIConversation.assistant_type == assistant_type
+        ).order_by(AIConversation.created_at.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_usage_stats(db, user_id, business_id=None):
+        """Get usage statistics for a user or business."""
+        from sqlalchemy import func
+        
+        query = db.query(
+            func.count(AIConversation.id).label('total_conversations'),
+            func.sum(AIConversation.tokens_used).label('total_tokens'),
+            func.avg(AIConversation.response_time_ms).label('avg_response_time')
+        ).filter(AIConversation.user_id == user_id)
+        
+        if business_id:
+            query = query.filter(AIConversation.business_id == business_id)
+        
+        result = query.first()
+        return {
+            "total_conversations": result.total_conversations or 0,
+            "total_tokens": result.total_tokens or 0,
+            "avg_response_time": float(result.avg_response_time or 0)
+        }

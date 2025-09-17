@@ -1,4 +1,7 @@
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '../types/auth';
+import { Business, BusinessCreate, Product, ProductCreate } from '../types/business';
+import { Order, OrderCreate, OrderUpdate, OrderStatus } from '../types/order';
+import { BusinessAnalytics, DateRangeStats, DailySales } from '../types/analytics';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -60,6 +63,77 @@ class ApiService {
 
   async getCurrentUser(): Promise<User> {
     return this.request<User>('/api/v1/auth/me');
+  }
+
+  // Business methods
+  async getBusinesses(): Promise<Business[]> {
+    return this.request<Business[]>('/api/v1/businesses');
+  }
+
+  async getBusiness(id: string): Promise<Business> {
+    return this.request<Business>(`/api/v1/businesses/${id}`);
+  }
+
+  async createBusiness(business: BusinessCreate): Promise<Business> {
+    return this.request<Business>('/api/v1/businesses', {
+      method: 'POST',
+      body: JSON.stringify(business),
+    });
+  }
+
+  // Product methods
+  async getProducts(params?: { business_id?: string; category?: string; is_available?: boolean }): Promise<Product[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.business_id) searchParams.append('business_id', params.business_id);
+    if (params?.category) searchParams.append('category', params.category);
+    if (params?.is_available !== undefined) searchParams.append('is_available', params.is_available.toString());
+    
+    const query = searchParams.toString();
+    return this.request<Product[]>(`/api/v1/products${query ? `?${query}` : ''}`);
+  }
+
+  async getBusinessProducts(businessId: string): Promise<Product[]> {
+    return this.request<Product[]>(`/api/v1/businesses/${businessId}/products`);
+  }
+
+  // Order methods
+  async getUserOrders(): Promise<Order[]> {
+    return this.request<Order[]>('/api/v1/orders');
+  }
+
+  async createOrder(order: OrderCreate): Promise<Order> {
+    return this.request<Order>('/api/v1/orders', {
+      method: 'POST',
+      body: JSON.stringify(order),
+    });
+  }
+
+  async getOrder(id: string): Promise<Order> {
+    return this.request<Order>(`/api/v1/orders/${id}`);
+  }
+
+  async updateOrderStatus(id: string, update: OrderUpdate): Promise<Order> {
+    return this.request<Order>(`/api/v1/orders/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(update),
+    });
+  }
+
+  async getBusinessOrders(businessId: string): Promise<Order[]> {
+    return this.request<Order[]>(`/api/v1/businesses/${businessId}/orders`);
+  }
+
+  // Analytics methods
+  async getBusinessAnalytics(businessId: string): Promise<BusinessAnalytics> {
+    return this.request<BusinessAnalytics>(`/api/v1/businesses/${businessId}/analytics`);
+  }
+
+  async getDailySales(businessId: string, days: number = 30): Promise<DailySales[]> {
+    return this.request<DailySales[]>(`/api/v1/businesses/${businessId}/analytics/daily?days=${days}`);
+  }
+
+  async getDateRangeStats(businessId: string, startDate: string, endDate: string): Promise<DateRangeStats> {
+    return this.request<DateRangeStats>(`/api/v1/businesses/${businessId}/analytics/date-range?start_date=${startDate}&end_date=${endDate}`);
   }
 }
 

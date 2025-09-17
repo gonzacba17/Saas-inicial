@@ -37,15 +37,35 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "modularbiz_saas"
     
+    # ==============================================
+    # CONFIGURACIÓN DE BASE DE DATOS SQLITE (DESARROLLO)
+    # ==============================================
+    sqlite_file: str = "modularbiz.db"
+    
     @property
     def database_url(self) -> str:
-        """Construye la URL de conexión a PostgreSQL"""
-        return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        """Construye la URL de conexión a la base de datos según el entorno"""
+        if self.environment == "production":
+            return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        else:
+            # Desarrollo: usar SQLite
+            return f"sqlite:///./{self.sqlite_file}"
     
     # ==============================================
     # CONFIGURACIÓN REDIS (OPCIONAL)
     # ==============================================
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
     redis_url: str = "redis://localhost:6379/0"
+    
+    # ==============================================
+    # CONFIGURACIÓN DE SEGURIDAD
+    # ==============================================
+    rate_limit_calls: int = 100
+    rate_limit_period: int = 3600  # 1 hour
+    enable_https_redirect: bool = False
+    trusted_proxies: str = "127.0.0.1,::1"
     
     # ==============================================
     # APIs EXTERNAS (OPCIONAL)

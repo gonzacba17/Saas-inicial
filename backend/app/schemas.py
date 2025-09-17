@@ -6,6 +6,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
+from enum import Enum
 
 # ========================================
 # TOKEN SCHEMAS
@@ -175,3 +176,116 @@ class Order(OrderInDBBase):
 
 class OrderInDB(OrderInDBBase):
     pass
+
+# ========================================
+# USER BUSINESS SCHEMAS
+# ========================================
+
+class UserBusinessRole(str, Enum):
+    OWNER = "owner"
+    MANAGER = "manager"
+    EMPLOYEE = "employee"
+
+class UserBusinessBase(BaseModel):
+    role: UserBusinessRole = UserBusinessRole.OWNER
+
+class UserBusinessCreate(UserBusinessBase):
+    business_id: UUID
+
+class UserBusinessUpdate(BaseModel):
+    role: Optional[UserBusinessRole] = None
+    is_active: Optional[bool] = None
+
+class UserBusinessInDBBase(UserBusinessBase):
+    id: UUID
+    user_id: UUID
+    business_id: UUID
+    is_active: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class UserBusiness(UserBusinessInDBBase):
+    pass
+
+class UserBusinessInDB(UserBusinessInDBBase):
+    pass
+
+# ========================================
+# ANALYTICS SCHEMAS
+# ========================================
+
+class ProductSalesStats(BaseModel):
+    product_id: UUID
+    product_name: str
+    total_quantity: int
+    total_revenue: float
+
+class BusinessAnalytics(BaseModel):
+    business_id: UUID
+    business_name: str
+    total_orders: int
+    total_revenue: float
+    pending_orders: int
+    completed_orders: int
+    top_products: list[ProductSalesStats]
+
+class DateRangeStats(BaseModel):
+    start_date: datetime
+    end_date: datetime
+    total_orders: int
+    total_revenue: float
+    average_order_value: float
+
+# ========================================
+# AI ASSISTANT SCHEMAS
+# ========================================
+
+class AIAssistantType(str, Enum):
+    PRODUCT_SUGGESTION = "product_suggestion"
+    SALES_ANALYSIS = "sales_analysis"
+    BUSINESS_INSIGHTS = "business_insights"
+    GENERAL_QUERY = "general_query"
+
+class AIQueryRequest(BaseModel):
+    prompt: str
+    assistant_type: AIAssistantType
+    business_id: Optional[UUID] = None
+
+class AIConversationBase(BaseModel):
+    prompt: str
+    response: str
+    assistant_type: AIAssistantType
+    business_id: Optional[UUID] = None
+    tokens_used: Optional[int] = 0
+    response_time_ms: Optional[int] = 0
+
+class AIConversationCreate(AIConversationBase):
+    pass
+
+class AIConversationInDBBase(AIConversationBase):
+    id: UUID
+    user_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AIConversation(AIConversationInDBBase):
+    pass
+
+class AIConversationInDB(AIConversationInDBBase):
+    pass
+
+class AIUsageStats(BaseModel):
+    total_conversations: int
+    total_tokens: int
+    avg_response_time: float
+
+class AIResponse(BaseModel):
+    response: str
+    conversation_id: UUID
+    tokens_used: int
+    response_time_ms: int
