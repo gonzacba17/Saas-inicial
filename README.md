@@ -1,274 +1,182 @@
 # 🚀 ModularBiz SaaS
 
-**Evolución de Cafetería IA hacia una plataforma SaaS modular y escalable**
+**Plataforma SaaS unificada y simplificada para desarrollo local**
 
-Plataforma SaaS construida con FastAPI y React TypeScript, diseñada para adaptarse a cualquier rubro de negocio. Comenzó como "Cafetería IA" y evolucionó hacia una solución modular que puede configurarse para restaurantes, tiendas, servicios, y más.
+Proyecto limpio y consolidado que evolucionó de "Cafetería IA" hacia una solución SaaS modular. **Diseñado para funcionar 100% local sin Docker ni Git**, con toda la funcionalidad unificada en archivos simples y manejables.
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura Simplificada
 
 ```
-modularbiz-saas/
+cafeteria-ia/
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/endpoints/
-│   │   │   ├── auth.py (JWT authentication)
-│   │   │   ├── users.py (user management)
-│   │   │   ├── products.py (CRUD productos)
-│   │   │   └── orders.py (checkout & payments)
-│   │   ├── core/
-│   │   │   ├── config.py (environment settings)
-│   │   │   └── security.py (JWT & permissions)
-│   │   ├── db/
-│   │   │   ├── models.py (User, Business, Product, Order)
-│   │   │   ├── repositories/ (data access layer)
-│   │   │   └── session.py (database connection)
-│   │   ├── schemas/ (Pydantic models)
-│   │   ├── services/ (business logic)
-│   │   │   ├── auth.py (authentication)
-│   │   │   ├── payment.py (MercadoPago integration)
-│   │   │   └── ai_service.py (OpenAI integration)
-│   │   └── workers/ (background tasks)
-│   ├── tests/ (pytest suite)
-│   ├── alembic/ (database migrations)
+│   │   ├── api/v1/users.py        # 🔥 TODOS los endpoints unificados
+│   │   ├── core/config.py         # Configuración centralizada
+│   │   ├── db/db.py              # 🔥 Modelos + CRUD unificados
+│   │   ├── schemas.py            # 🔥 Validaciones unificadas
+│   │   ├── services.py           # 🔥 Lógica de negocio unificada
+│   │   └── main.py               # FastAPI app
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── components/ (reusable UI components)
-│   │   ├── pages/ (route components)
-│   │   ├── store/ (Zustand state management)
-│   │   ├── services/ (API layer)
-│   │   ├── types/ (TypeScript definitions)
-│   │   └── tests/ (Vitest suite)
-│   ├── package.json (dependencies & scripts)
-│   └── vite.config.ts (build configuration)
-├── .github/workflows/ (CI/CD automation)
-├── docs/ (project documentation)
-├── infra/ (deployment configurations)
-├── CHANGELOG.md (version history)
-├── Roadmap.md (development roadmap)
-└── docker-compose.yml (local development)
+│   │   ├── components/Dashboard.tsx  # Layout principal
+│   │   ├── pages/                   # Login, Register, Businesses, etc.
+│   │   ├── services/api.ts          # API client
+│   │   ├── store/                   # authStore, cartStore
+│   │   └── App.tsx
+│   └── package.json
+├── CHANGELOG.md                     # 🔥 Hecho + Por hacer unificado
+└── README.md
 ```
 
-## 🚀 Instrucciones de Ejecución (Windows PowerShell)
+### 🎯 **Características de la Arquitectura Unificada**
+
+- **Un solo archivo de endpoints**: `users.py` contiene auth + users + businesses + products
+- **Un solo archivo de modelos**: `db.py` contiene todos los modelos SQLAlchemy + CRUD
+- **Un solo archivo de schemas**: `schemas.py` contiene todas las validaciones Pydantic
+- **Un solo archivo de servicios**: `services.py` contiene autenticación y lógica de negocio
+- **Sin Docker**: Desarrollo local directo con Python + Node
+- **Sin Git complexity**: Proyecto autocontenido sin CI/CD
+
+## 🚀 Instrucciones de Ejecución
 
 ### Prerrequisitos
 
-- [Node.js](https://nodejs.org/) (v18 o superior)
-- [Python](https://www.python.org/) (v3.11 o superior)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- [Git](https://git-scm.com/)
+- [Python 3.11+](https://www.python.org/)
+- [Node.js 18+](https://nodejs.org/)
 
 ### 1. Configuración Inicial
 
-```powershell
-# Clonar el repositorio
-git clone <repository-url>
-cd modularbiz-saas
+```bash
+# Ir al directorio del proyecto
+cd cafeteria-ia
 
-# Copiar archivos de configuración
-Copy-Item "backend\.env.example" "backend\.env"
-Copy-Item "frontend\.env.example" "frontend\.env"
-
-# Editar variables de entorno según necesidades
-# Importante: Cambiar SECRET_KEY en producción
+# Crear archivos de configuración
+# Backend: crear backend/.env con las variables necesarias
+# Frontend: crear frontend/.env con las variables necesarias
 ```
 
-### 2. Ejecutar con Docker (Recomendado)
+### 2. Ejecutar Backend
 
-```powershell
-# Construir y ejecutar todos los servicios
-docker-compose up --build
-
-# Para ejecutar en segundo plano
-docker-compose up -d --build
-
-# Para detener los servicios
-docker-compose down
-```
-
-Los servicios estarán disponibles en:
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
-
-### 3. Desarrollo Local
-
-#### Backend
-
-```powershell
-# Navegar al directorio del backend
+```bash
 cd backend
-
-# Crear entorno virtual
-python -m venv venv
-
-# Activar entorno virtual
-.\venv\Scripts\Activate.ps1
 
 # Instalar dependencias
 pip install -r requirements.txt
 
-# Configurar variables de entorno
-# Editar el archivo .env con los valores correctos
-
-# Ejecutar el servidor de desarrollo
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Ejecutar servidor de desarrollo
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### Frontend
+### 3. Ejecutar Frontend
 
-```powershell
-# Abrir nueva terminal y navegar al directorio del frontend
+```bash
 cd frontend
 
 # Instalar dependencias
 npm install
 
-# Ejecutar el servidor de desarrollo
+# Ejecutar servidor de desarrollo
 npm run dev
 ```
 
-#### Base de Datos (PostgreSQL local)
+## 🔧 Variables de Entorno
 
-```powershell
-# Instalar PostgreSQL o usar Docker
-docker run --name postgres-modularbiz -e POSTGRES_DB=modularbiz_saas -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15
-
-# Crear las tablas (desde el directorio backend)
-# Nota: Implementar Alembic migrations según necesidades
+### Backend (.env)
+```env
+DATABASE_URL=sqlite:///./modularbiz.db
+SECRET_KEY=your-secret-key-here-minimum-32-characters-long
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+PROJECT_NAME=ModularBiz SaaS
+VERSION=0.3.0
+API_V1_STR=/api/v1
 ```
 
-### 4. Comandos Útiles
-
-```powershell
-# Ver logs de Docker
-docker-compose logs -f
-
-# Reconstruir un servicio específico
-docker-compose up --build backend
-docker-compose up --build frontend
-
-# Ejecutar comandos dentro de contenedores
-docker-compose exec backend bash
-docker-compose exec frontend sh
-
-# Limpiar volúmenes y contenedores
-docker-compose down -v
-docker system prune -a
-```
-
-### 5. Variables de Entorno
-
-#### Backend (.env)
-```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/modularbiz_saas
-SECRET_KEY=your-super-secret-key-here-change-this-in-production-minimum-32-characters
-OPENAI_API_KEY=your-openai-api-key-here
-MERCADOPAGO_ACCESS_TOKEN=your-mercadopago-access-token-here
-REDIS_URL=redis://localhost:6379/0
-ENVIRONMENT=development
-```
-
-#### Frontend (.env)
-```
+### Frontend (.env)
+```env
 VITE_API_URL=http://localhost:8000
 VITE_APP_NAME=ModularBiz SaaS
-VITE_ENABLE_AI_FEATURES=true
-VITE_ENABLE_PAYMENTS=true
 ```
 
-## 🔧 Desarrollo
+## ✨ **Características Principales**
 
-### Estructura de la API
+### 🔐 **Autenticación Completa**
+- JWT tokens con refresh
+- Registro y login de usuarios  
+- Protección de rutas
 
-#### Auth Endpoints
-- **POST** `/api/v1/auth/register` - Registro de usuario
-- **POST** `/api/v1/auth/login` - Login de usuario  
-- **POST** `/api/v1/auth/refresh` - Renovar token
-- **GET** `/api/v1/auth/me` - Información del usuario actual
+### 🏢 **Gestión de Negocios**
+- CRUD completo de businesses
+- Tipos de negocio configurables
+- Multi-tenant ready
 
-#### User Management
-- **GET** `/api/v1/users/` - Lista de usuarios
-- **GET** `/api/v1/users/{user_id}` - Usuario específico
-- **PUT** `/api/v1/users/{user_id}` - Actualizar usuario
+### 📦 **Gestión de Productos**
+- CRUD completo con filtros
+- Categorías y precios
+- Control de disponibilidad
 
-#### Cafe & Products (Próximamente en Fase 3)
-- **GET** `/api/v1/cafes/` - Lista de cafeterías
-- **GET** `/api/v1/cafes/{cafe_id}/products` - Productos de una cafetería
-- **POST** `/api/v1/orders/` - Crear pedido
+### 💻 **Frontend Moderno**
+- React + TypeScript
+- Dashboard profesional
+- Responsive design
+- Estado global con Zustand
 
-#### AI Assistant (Próximamente en Fase 5)
-- **POST** `/api/v1/assistant/` - Consulta al asistente IA
-- **GET** `/api/v1/analytics/sales` - Análisis de ventas
+## 🎯 **API Endpoints Disponibles**
 
-### Tecnologías Utilizadas
+```bash
+# Autenticación
+POST /api/v1/auth/register
+POST /api/v1/auth/login  
+POST /api/v1/auth/refresh
+GET  /api/v1/auth/me
 
-#### Backend
-- **FastAPI** - Framework web moderno y rápido
-- **SQLAlchemy** - ORM para Python
-- **Alembic** - Migraciones de base de datos
-- **PostgreSQL** - Base de datos principal
-- **Redis** - Cache y sesiones
-- **JWT** - Autenticación con tokens
-- **OpenAI** - Integración de IA (opcional)
-- **Celery** - Tareas en segundo plano
-- **Python-dotenv** - Variables de entorno
+# Usuarios
+GET  /api/v1/users
+GET  /api/v1/users/{id}
+PUT  /api/v1/users/{id}
 
-#### Frontend
-- **React 18** - Biblioteca de UI
-- **TypeScript** - Tipado estático
-- **Vite** - Build tool rápido
-- **Tailwind CSS** - Framework de CSS
-- **Zustand** - State management
-- **React Router** - Navegación SPA
-- **Vitest** - Testing framework
+# Negocios
+GET  /api/v1/businesses
+POST /api/v1/businesses
+GET  /api/v1/businesses/{id}
+PUT  /api/v1/businesses/{id}
+DELETE /api/v1/businesses/{id}
 
-#### DevOps & CI/CD
-- **Docker & Docker Compose** - Contenarización
-- **GitHub Actions** - CI/CD automatizado
-- **PostgreSQL & Redis** - Servicios de datos
+# Productos
+GET  /api/v1/products
+POST /api/v1/products
+GET  /api/v1/products/{id}
+PUT  /api/v1/products/{id}
+DELETE /api/v1/products/{id}
+GET  /api/v1/businesses/{id}/products
+```
 
-## 📝 Estado del Proyecto
+## 📚 **Arquitectura Técnica**
 
-### 🏗️ Evolución: De Cafetería IA a ModularBiz SaaS
+### Backend (FastAPI)
+- **Unified endpoints**: Todos en `users.py`
+- **Unified models**: SQLAlchemy en `db.py`
+- **Unified schemas**: Pydantic en `schemas.py`
+- **Unified services**: Auth y business logic en `services.py`
 
-Este proyecto comenzó como una solución específica para cafeterías y evolucionó hacia una **plataforma SaaS modular** que puede adaptarse a cualquier tipo de negocio.
+### Frontend (React)
+- **Component-based**: Dashboard modular
+- **Type-safe**: TypeScript en todo el proyecto
+- **State management**: Zustand stores
+- **Modern routing**: React Router v6
 
-### ✅ Completado (v0.2.0)
-- ✅ **Arquitectura modular** - Estructura escalable backend/frontend
-- ✅ **Autenticación JWT** - Sistema completo de auth con refresh tokens
-- ✅ **Frontend SPA** - React + TypeScript + Tailwind CSS
-- ✅ **State Management** - Zustand para auth y carrito
-- ✅ **API Foundation** - FastAPI con documentación automática
-- ✅ **Database Layer** - SQLAlchemy + Alembic migrations
-- ✅ **Containerización** - Docker Compose para desarrollo
-- ✅ **CI/CD Pipeline** - GitHub Actions con tests automatizados
-- ✅ **Testing Setup** - Pytest (backend) y Vitest (frontend)
+### Database
+- **SQLite**: Para desarrollo local simple
+- **PostgreSQL**: Para producción (configurable)
+- **SQLAlchemy ORM**: Modelos declarativos
 
-### 🎯 MVP En Desarrollo (v0.3.0)
+**Proyecto simplificado y listo para desarrollo local sin dependencias externas.**
 
-**Core Features:**
-- 🔄 CRUD completo de productos/servicios
-- 💳 Checkout con integración MercadoPago
-- 📊 Dashboard de ventas y métricas
-- 🏪 Sistema multi-tenant (configuración por negocio)
+---
 
-**Seguridad & Performance:**
-- 🛡️ Rate limiting con Redis
-- 🔒 Validación de webhooks de pago
-- ⚡ Optimización de queries y caching
+## 📝 Más Información
 
-### 🎯 Checklist de Desarrollo
-1. ✅ Clonar y configurar `.env` files
-2. ✅ Levantar con `docker-compose up --build`
-3. ✅ Acceder a API docs: http://localhost:8000/docs
-4. ✅ Acceder a frontend: http://localhost:5173
-
-## 🔒 Seguridad
-
-- Cambiar `SECRET_KEY` en producción
-- Configurar CORS apropiadamente
-- Usar HTTPS en producción
-- Configurar variables de entorno seguras
+Ver `CHANGELOG.md` para:
+- ✅ Funcionalidades completadas
+- 🚧 Roadmap de próximas versiones
+- 📋 Instrucciones detalladas de configuración

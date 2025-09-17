@@ -21,7 +21,7 @@ app.include_router(api.api_router, prefix=settings.api_v1_str)
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to SaaS Inicial API"}
+    return {"message": "Welcome to ModularBiz SaaS API"}
 
 if __name__ == "__main__":
     import uvicorn
