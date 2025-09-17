@@ -13,7 +13,14 @@
       "Bash(git config:*)",
       "Bash(rm:*)",
       "Bash(touch:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 10s npm run dev)",
+      "Bash(true)",
+      "Bash(mv:*)",
+      "Bash(ls:*)",
+      "Bash(python -m alembic revision:*)"
     ],
     "deny": []
   }

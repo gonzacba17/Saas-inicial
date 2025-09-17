@@ -1,69 +1,52 @@
-# 📍 Cafeteria IA
+# 🚀 ModularBiz SaaS
 
-Sistema inteligente para gestión de cafeterías construido con FastAPI (backend) y React TypeScript (frontend).
+**Evolución de Cafetería IA hacia una plataforma SaaS modular y escalable**
+
+Plataforma SaaS construida con FastAPI y React TypeScript, diseñada para adaptarse a cualquier rubro de negocio. Comenzó como "Cafetería IA" y evolucionó hacia una solución modular que puede configurarse para restaurantes, tiendas, servicios, y más.
 
 ## 📁 Estructura del Proyecto
 
 ```
-cafeteria-ia/
+modularbiz-saas/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/endpoints/
-│   │   │   ├── auth.py (register, login, refresh, me)
-│   │   │   └── users.py
+│   │   │   ├── auth.py (JWT authentication)
+│   │   │   ├── users.py (user management)
+│   │   │   ├── products.py (CRUD productos)
+│   │   │   └── orders.py (checkout & payments)
 │   │   ├── core/
-│   │   │   └── config.py
+│   │   │   ├── config.py (environment settings)
+│   │   │   └── security.py (JWT & permissions)
 │   │   ├── db/
-│   │   │   ├── models.py (User, Cafe, Product, Order)
-│   │   │   ├── repositories/
-│   │   │   └── session.py
-│   │   ├── schemas/
-│   │   │   ├── user.py
-│   │   │   ├── cafe.py
-│   │   │   ├── product.py
-│   │   │   ├── order.py
-│   │   │   └── token.py
-│   │   ├── services/
-│   │   │   ├── auth.py
-│   │   │   ├── user.py
-│   │   │   └── ai_service.py (OpenAIAdapter)
-│   │   ├── workers/
-│   │   └── main.py
-│   ├── tests/
-│   │   └── test_health.py
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
+│   │   │   ├── models.py (User, Business, Product, Order)
+│   │   │   ├── repositories/ (data access layer)
+│   │   │   └── session.py (database connection)
+│   │   ├── schemas/ (Pydantic models)
+│   │   ├── services/ (business logic)
+│   │   │   ├── auth.py (authentication)
+│   │   │   ├── payment.py (MercadoPago integration)
+│   │   │   └── ai_service.py (OpenAI integration)
+│   │   └── workers/ (background tasks)
+│   ├── tests/ (pytest suite)
+│   ├── alembic/ (database migrations)
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   │   ├── Login.tsx
-│   │   │   ├── Register.tsx
-│   │   │   ├── Cafes.tsx
-│   │   │   ├── CafeDetail.tsx
-│   │   │   └── Checkout.tsx
-│   │   ├── store/
-│   │   │   ├── authStore.ts (Zustand)
-│   │   │   └── cartStore.ts (Zustand)
-│   │   ├── services/
-│   │   │   └── api.ts
-│   │   ├── types/
-│   │   │   └── auth.ts
-│   │   ├── tests/
-│   │   │   ├── setup.ts
-│   │   │   └── App.test.tsx
-│   │   └── App.tsx (React Router)
-│   ├── Dockerfile
-│   └── .env.example
-├── .github/workflows/
-│   └── ci.yml
-├── infra/
-├── docs/
-├── tests/
-├── CHANGELOG.md
-├── Roadmap.md
-└── docker-compose.yml
+│   │   ├── components/ (reusable UI components)
+│   │   ├── pages/ (route components)
+│   │   ├── store/ (Zustand state management)
+│   │   ├── services/ (API layer)
+│   │   ├── types/ (TypeScript definitions)
+│   │   └── tests/ (Vitest suite)
+│   ├── package.json (dependencies & scripts)
+│   └── vite.config.ts (build configuration)
+├── .github/workflows/ (CI/CD automation)
+├── docs/ (project documentation)
+├── infra/ (deployment configurations)
+├── CHANGELOG.md (version history)
+├── Roadmap.md (development roadmap)
+└── docker-compose.yml (local development)
 ```
 
 ## 🚀 Instrucciones de Ejecución (Windows PowerShell)
@@ -80,7 +63,7 @@ cafeteria-ia/
 ```powershell
 # Clonar el repositorio
 git clone <repository-url>
-cd cafeteria-ia
+cd modularbiz-saas
 
 # Copiar archivos de configuración
 Copy-Item "backend\.env.example" "backend\.env"
@@ -151,7 +134,7 @@ npm run dev
 
 ```powershell
 # Instalar PostgreSQL o usar Docker
-docker run --name postgres-cafeteria -e POSTGRES_DB=cafeteria_ia -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15
+docker run --name postgres-modularbiz -e POSTGRES_DB=modularbiz_saas -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:15
 
 # Crear las tablas (desde el directorio backend)
 # Nota: Implementar Alembic migrations según necesidades
@@ -180,18 +163,20 @@ docker system prune -a
 
 #### Backend (.env)
 ```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cafeteria_ia
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/modularbiz_saas
 SECRET_KEY=your-super-secret-key-here-change-this-in-production-minimum-32-characters
 OPENAI_API_KEY=your-openai-api-key-here
-MERCADOPAGO_KEY=your-mercadopago-access-token-here
+MERCADOPAGO_ACCESS_TOKEN=your-mercadopago-access-token-here
 REDIS_URL=redis://localhost:6379/0
+ENVIRONMENT=development
 ```
 
 #### Frontend (.env)
 ```
 VITE_API_URL=http://localhost:8000
-VITE_APP_NAME=Cafeteria IA
+VITE_APP_NAME=ModularBiz SaaS
 VITE_ENABLE_AI_FEATURES=true
+VITE_ENABLE_PAYMENTS=true
 ```
 
 ## 🔧 Desarrollo
@@ -247,32 +232,33 @@ VITE_ENABLE_AI_FEATURES=true
 
 ## 📝 Estado del Proyecto
 
-### ✅ Completado (Fase 0-2)
-- ✅ **Scaffold inicial** - Estructura completa del proyecto
-- ✅ **Autenticación JWT** - Login, registro, refresh, perfil
-- ✅ **Frontend SPA** - React Router con páginas principales
+### 🏗️ Evolución: De Cafetería IA a ModularBiz SaaS
+
+Este proyecto comenzó como una solución específica para cafeterías y evolucionó hacia una **plataforma SaaS modular** que puede adaptarse a cualquier tipo de negocio.
+
+### ✅ Completado (v0.2.0)
+- ✅ **Arquitectura modular** - Estructura escalable backend/frontend
+- ✅ **Autenticación JWT** - Sistema completo de auth con refresh tokens
+- ✅ **Frontend SPA** - React + TypeScript + Tailwind CSS
 - ✅ **State Management** - Zustand para auth y carrito
-- ✅ **AI Service** - OpenAIAdapter preparado (sin clave)
-- ✅ **Docker Setup** - Compose con PostgreSQL, Redis, backend, frontend
-- ✅ **CI/CD** - GitHub Actions con lint y tests
-- ✅ **Tests básicos** - Pytest (backend) y Vitest (frontend)
+- ✅ **API Foundation** - FastAPI con documentación automática
+- ✅ **Database Layer** - SQLAlchemy + Alembic migrations
+- ✅ **Containerización** - Docker Compose para desarrollo
+- ✅ **CI/CD Pipeline** - GitHub Actions con tests automatizados
+- ✅ **Testing Setup** - Pytest (backend) y Vitest (frontend)
 
-### 🚧 Próximas Fases (según Roadmap.md)
+### 🎯 MVP En Desarrollo (v0.3.0)
 
-**Fase 3** - MVP funcional:
-- CRUD de Cafés, Productos y Menús
-- Carrito + Checkout con MercadoPago
-- Dashboard de ventas
+**Core Features:**
+- 🔄 CRUD completo de productos/servicios
+- 💳 Checkout con integración MercadoPago
+- 📊 Dashboard de ventas y métricas
+- 🏪 Sistema multi-tenant (configuración por negocio)
 
-**Fase 4** - Seguridad mínima:
-- Rate limiting con Redis
-- Validación de webhooks MercadoPago
-- HTTPS en producción
-
-**Fase 5** - IA inicial:
-- Activar OpenAI con claves reales
-- Endpoints de analytics y asistente
-- Cacheo de prompts en BD
+**Seguridad & Performance:**
+- 🛡️ Rate limiting con Redis
+- 🔒 Validación de webhooks de pago
+- ⚡ Optimización de queries y caching
 
 ### 🎯 Checklist de Desarrollo
 1. ✅ Clonar y configurar `.env` files

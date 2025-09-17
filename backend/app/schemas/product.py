@@ -11,7 +11,7 @@ class ProductBase(BaseModel):
     image_url: Optional[str] = None
 
 class ProductCreate(ProductBase):
-    cafe_id: UUID
+    business_id: UUID
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -23,7 +23,7 @@ class ProductUpdate(BaseModel):
 
 class ProductInDBBase(ProductBase):
     id: UUID
-    cafe_id: UUID
+    business_id: UUID
     is_available: bool
     created_at: datetime
     updated_at: Optional[datetime] = None

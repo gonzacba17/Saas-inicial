@@ -21,7 +21,7 @@ class OrderItem(OrderItemBase):
         from_attributes = True
 
 class OrderBase(BaseModel):
-    cafe_id: UUID
+    business_id: UUID
     notes: Optional[str] = None
 
 class OrderCreate(OrderBase):

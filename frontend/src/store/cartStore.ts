@@ -5,7 +5,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  cafe_id: string;
+  business_id: string;
   description?: string;
   image_url?: string;
 }
@@ -19,14 +19,14 @@ interface CartItem {
 interface CartState {
   items: CartItem[];
   total: number;
-  cafe_id: string | null;
+  business_id: string | null;
   
   // Actions
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
-  setCafe: (cafeId: string) => void;
+  setBusiness: (businessId: string) => void;
   getItemCount: () => number;
 }
 
@@ -35,7 +35,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       total: 0,
-      cafe_id: null,
+      business_id: null,
       
       addItem: (product: Product, quantity = 1) => {
         const state = get();
@@ -75,7 +75,7 @@ export const useCartStore = create<CartState>()(
         set({
           items: newItems,
           total: newTotal,
-          cafe_id: product.cafe_id,
+          business_id: product.business_id,
         });
       },
       
@@ -87,7 +87,7 @@ export const useCartStore = create<CartState>()(
         set({
           items: newItems,
           total: newTotal,
-          cafe_id: newItems.length > 0 ? state.cafe_id : null,
+          business_id: newItems.length > 0 ? state.business_id : null,
         });
       },
       
@@ -121,12 +121,12 @@ export const useCartStore = create<CartState>()(
         set({
           items: [],
           total: 0,
-          cafe_id: null,
+          business_id: null,
         });
       },
       
-      setCafe: (cafeId: string) => {
-        set({ cafe_id: cafeId });
+      setBusiness: (businessId: string) => {
+        set({ business_id: businessId });
       },
       
       getItemCount: () => {
@@ -139,7 +139,7 @@ export const useCartStore = create<CartState>()(
       partialize: (state) => ({
         items: state.items,
         total: state.total,
-        cafe_id: state.cafe_id,
+        business_id: state.business_id,
       }),
     }
   )

@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: test_cafeteria_ia
+          POSTGRES_DB: test_modularbiz_saas
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -59,12 +59,11 @@ jobs:
     - name: Test with pytest
       working-directory: ./backend
       env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_cafeteria_ia
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_modularbiz_saas
         SECRET_KEY: test-secret-key-for-ci
       run: |
-        # Run tests when they are created
-        echo "Tests placeholder - implement in Fase 2"
-        # pytest
+        # Run existing tests
+        pytest tests/ -v
 
   test-frontend:
     runs-on: ubuntu-latest
@@ -97,9 +96,8 @@ jobs:
     - name: Test frontend
       working-directory: ./frontend
       run: |
-        # Add tests when created
-        echo "Frontend tests placeholder - implement in Fase 2"
-        # npm test
+        # Run existing tests
+        npm test
 
   security-scan:
     runs-on: ubuntu-latest

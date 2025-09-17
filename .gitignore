@@ -135,3 +135,22 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Pytest / coverage
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Local AI configs
+.claude/
+
+# Docker volumes
+data/
+postgres-data/
+redis-data/
+*.env.docker
+docker-compose.override.yml
+
+# Backend logs
+backend/*.log

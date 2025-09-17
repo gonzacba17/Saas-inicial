@@ -29,8 +29,8 @@ class User(Base):
     # Relationships
     orders = relationship("Order", back_populates="user")
 
-class Cafe(Base):
-    __tablename__ = "cafes"
+class Business(Base):
+    __tablename__ = "businesses"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     name = Column(String, nullable=False, index=True)
@@ -38,19 +38,20 @@ class Cafe(Base):
     address = Column(String)
     phone = Column(String)
     email = Column(String)
+    business_type = Column(String, default="general")  # restaurant, store, service, etc.
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    products = relationship("Product", back_populates="cafe")
-    orders = relationship("Order", back_populates="cafe")
+    products = relationship("Product", back_populates="business")
+    orders = relationship("Order", back_populates="business")
 
 class Product(Base):
     __tablename__ = "products"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    cafe_id = Column(UUID(as_uuid=True), ForeignKey("cafes.id"), nullable=False)
+    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
     name = Column(String, nullable=False, index=True)
     description = Column(Text)
     price = Column(Float, nullable=False)
@@ -61,7 +62,7 @@ class Product(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
-    cafe = relationship("Cafe", back_populates="products")
+    business = relationship("Business", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
 
 class Order(Base):
@@ -69,7 +70,7 @@ class Order(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    cafe_id = Column(UUID(as_uuid=True), ForeignKey("cafes.id"), nullable=False)
+    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
     total_amount = Column(Float, nullable=False)
     notes = Column(Text)
@@ -78,7 +79,7 @@ class Order(Base):
     
     # Relationships
     user = relationship("User", back_populates="orders")
-    cafe = relationship("Cafe", back_populates="orders")
+    business = relationship("Business", back_populates="orders")
     items = relationship("OrderItem", back_populates="order")
 
 class OrderItem(Base):

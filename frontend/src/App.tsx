@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuthStore } from './store/authStore';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
-import { Cafes } from './pages/Cafes';
-import { CafeDetail } from './pages/CafeDetail';
+import { Businesses } from './pages/Businesses';
+import { BusinessDetail } from './pages/BusinessDetail';
 import { Checkout } from './pages/Checkout';
 
 function App() {
@@ -25,21 +25,21 @@ function App() {
         {/* Public routes */}
         <Route 
           path="/login" 
-          element={!isAuthenticated ? <Login /> : <Navigate to="/cafes" />} 
+          element={!isAuthenticated ? <Login /> : <Navigate to="/businesses" />} 
         />
         <Route 
           path="/register" 
-          element={!isAuthenticated ? <Register /> : <Navigate to="/cafes" />} 
+          element={!isAuthenticated ? <Register /> : <Navigate to="/businesses" />} 
         />
         
         {/* Protected routes */}
         <Route 
-          path="/cafes" 
-          element={isAuthenticated ? <Cafes /> : <Navigate to="/login" />} 
+          path="/businesses" 
+          element={isAuthenticated ? <Businesses /> : <Navigate to="/login" />} 
         />
         <Route 
-          path="/cafes/:cafeId" 
-          element={isAuthenticated ? <CafeDetail /> : <Navigate to="/login" />} 
+          path="/businesses/:businessId" 
+          element={isAuthenticated ? <BusinessDetail /> : <Navigate to="/login" />} 
         />
         <Route 
           path="/checkout" 
@@ -49,13 +49,13 @@ function App() {
         {/* Default redirect */}
         <Route 
           path="/" 
-          element={<Navigate to={isAuthenticated ? "/cafes" : "/login"} />} 
+          element={<Navigate to={isAuthenticated ? "/businesses" : "/login"} />} 
         />
         
         {/* Catch all route */}
         <Route 
           path="*" 
-          element={<Navigate to={isAuthenticated ? "/cafes" : "/login"} />} 
+          element={<Navigate to={isAuthenticated ? "/businesses" : "/login"} />} 
         />
       </Routes>
     </Router>
