@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     postgres_password: str = "postgres"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str = "modularbiz_saas"
+    postgres_db: str = "saas_db"
     
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS SQLITE (DESARROLLO)
@@ -44,12 +44,13 @@ class Settings(BaseSettings):
     
     @property
     def database_url(self) -> str:
-        """Construye la URL de conexión a la base de datos según el entorno"""
-        if self.environment == "production":
-            return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
-        else:
-            # Desarrollo: usar SQLite
+        """Construye la URL de conexión a la base de datos"""
+        # Verificar si PostgreSQL está disponible, sino usar SQLite
+        if os.getenv("USE_SQLITE", "false").lower() == "true":
             return f"sqlite:///./{self.sqlite_file}"
+        else:
+            # Configuración para PostgreSQL (roadmap objetivo)
+            return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
     
     # ==============================================
     # CONFIGURACIÓN REDIS (OPCIONAL)

@@ -1,64 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-
-interface Business {
-  id: string;
-  name: string;
-  description: string;
-  address: string;
-  phone: string;
-  email: string;
-  business_type: string;
-  is_active: boolean;
-}
+import { apiService } from '../services/api';
+import { Business } from '../types/business';
 
 export const Businesses: React.FC = () => {
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
-  // Mock data for now - will connect to API later
+  // Fetch businesses from API
   useEffect(() => {
-    const mockBusinesses: Business[] = [
-      {
-        id: '1',
-        name: 'Central Coffee',
-        description: 'Premium coffee experience in the heart of the city',
-        address: '123 Main St, Downtown',
-        phone: '+1 (555) 123-4567',
-        email: 'info@centralcoffee.com',
-        business_type: 'restaurant',
-        is_active: true,
-      },
-      {
-        id: '2',
-        name: 'Tech Store Pro',
-        description: 'Latest technology and gadgets for professionals',
-        address: '456 Tech Ave, Innovation District',
-        phone: '+1 (555) 234-5678',
-        email: 'hello@techstorepro.com',
-        business_type: 'store',
-        is_active: true,
-      },
-      {
-        id: '3',
-        name: 'Garden Services',
-        description: 'Professional landscaping and garden maintenance',
-        address: '789 Garden Blvd, Green Valley',
-        phone: '+1 (555) 345-6789',
-        email: 'contact@gardenservices.com',
-        business_type: 'service',
-        is_active: true,
-      },
-    ];
+    const fetchBusinesses = async () => {
+      try {
+        const data = await apiService.getBusinesses();
+        setBusinesses(data);
+      } catch (err) {
+        setError('Failed to load businesses');
+        console.error('Error fetching businesses:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Simulate API call
-    setTimeout(() => {
-      setBusinesses(mockBusinesses);
-      setLoading(false);
-    }, 1000);
+    fetchBusinesses();
   }, []);
 
   const handleBusinessClick = (businessId: string) => {
@@ -100,6 +67,22 @@ export const Businesses: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-xl">Loading businesses...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl text-red-600 mb-4">{error}</div>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

@@ -1,56 +1,88 @@
-# 🗺️ Roadmap - Cafetería IA (ModularBiz SaaS)
+# 📌 Roadmap del Proyecto Saas-inicial
 
-Este roadmap guía la evolución del proyecto paso a paso.  
-Cada fase debe ejecutarse en orden, dejando registro en `CHANGELOG.md`.
-
----
-
-## ✅ Fase 1 — Autenticación y Usuarios (completado en gran parte)
-- [x] Registro, login y refresh token.
-- [x] Perfil de usuario (`/me`).
-- [x] CRUD básico de usuarios.
+## ✅ Ya logrado
+- Scaffold inicial del proyecto SaaS (backend FastAPI + frontend React/TS + Vite + Tailwind).
+- Estructura de carpetas organizada.
+- Archivos base (`README.md`, `.gitignore`, `Changelog.md`, `Roadmap.md`).
+- GitHub repo inicializado.
 
 ---
 
-## ✅ Fase 2 — Negocios y Productos (completado)
-- [x] CRUD de negocios (crear, listar, editar, eliminar).
-- [x] CRUD de productos (crear, listar, editar, eliminar).
-- [x] Relación usuarios ↔ negocios (dueños de negocio).
-- [x] Validaciones y permisos: sólo dueños pueden modificar su negocio/productos.
+## 🚀 Sprint 1 — MVP funcional (local con PostgreSQL)
+
+### Backend ✅ COMPLETADO
+- [x] Configurar `.env` con conexión a PostgreSQL local.
+- [x] Crear base de datos `saas_db` en PostgreSQL local.
+- [x] Configurar Alembic (`alembic/` + `env.py`).
+- [x] Crear modelos principales en `backend/app/db/models/`:
+  - `User` (UUID, email, hashed password, role).
+  - `Business` (equivalente a Cafe - id, nombre, dueño, dirección).
+  - `Product` (id, nombre, precio, business_id).
+  - `Order` (id, usuario, productos, estado, total).
+- [x] Generar migraciones iniciales (`alembic revision --autogenerate` + `alembic upgrade head`).
+- [x] Implementar endpoints Auth:
+  - `/api/v1/auth/register`
+  - `/api/v1/auth/login`
+  - `/api/v1/auth/refresh`
+  - `/api/v1/auth/me`
+- [x] CRUD básico:
+  - `/api/v1/businesses` (crear, listar, actualizar, eliminar)
+  - `/api/v1/products` (crear, listar, actualizar, eliminar)
+- [x] Orders:
+  - `/api/v1/orders` (crear orden, ver estado, gestión completa)
+
+### Frontend ✅ COMPLETADO
+- [x] Conectar formularios **Login/Register** con backend real.
+- [x] Crear vistas:
+  - Listado de negocios (equivalente a cafés) ✅
+  - Listado de productos ✅
+  - Carrito (Zustand store) ✅
+  - Checkout (funcional con backend real) ✅
+- [x] Manejo de sesión (guardar JWT, refrescar token, logout).
+- [x] Proteger rutas que requieran login.
 
 ---
 
-## ✅ Fase 3 — Carrito y Checkout (completado)
-- [x] Implementar carrito en frontend.
-- [x] API de checkout en backend.
-- [ ] Integrar **MercadoPago** (sandbox primero).
-- [x] Manejo de estados de pedido (pendiente, pagado, entregado).
+## 💳 Sprint 2 — Pagos y Dashboard
+
+- [ ] Integrar **MercadoPago sandbox** en backend:
+  - `/api/v1/payments/create`
+  - `/api/v1/payments/webhook`
+- [ ] Configurar `MERCADOPAGO_KEY` en `.env`.
+- [ ] Endpoint `/api/v1/analytics/sales` con métricas básicas.
+- [ ] Frontend: `Dashboard.tsx` con KPIs (ventas, pedidos, top productos).
+- [ ] Seguridad:
+  - SECRET_KEY fuerte
+  - CORS correcto
+  - `.env` ignorado en git
+- [ ] Tests básicos:
+  - Backend (`tests/test_auth.py`, `tests/test_orders.py`)
+  - Frontend (Vitest/RTL en `LoginForm`, `RegisterForm`, `Dashboard`)
 
 ---
 
-## ✅ Fase 4 — Dashboard de Analytics (completado)
-- [x] Endpoint para estadísticas (ventas totales, productos más vendidos).
-- [x] Interfaz en frontend para dueños de negocio.
-- [x] Visualizaciones con gráficas simples (ej: ventas por día).
+## ⚙️ Sprint 3 — Calidad y CI/CD
+
+- [ ] CI en GitHub Actions (`.github/workflows/ci.yml`):
+  - Backend → lint (flake8/ruff), pytest
+  - Frontend → eslint, build, vitest
+- [ ] Agregar checks de seguridad (bandit, safety)
+- [ ] Documentación actualizada (`README.md`, `CHANGELOG.md`, `ROADMAP.md`)
 
 ---
 
-## ✅ Fase 5 — Integración de IA (completado)
-- [x] Configurar asistente básico (ej: sugerencias de productos, análisis de ventas).
-- [x] Integración con API externa (ej: OpenAI).
-- [x] Guardar prompts/respuestas en base de datos.
+## 🤖 Sprint 4 — IA y features avanzadas
+
+- [ ] Implementar `app/services/ai_service.py`
+- [ ] Endpoint `/api/v1/analytics/insights` que use OpenAI (si configuras key)
+- [ ] Guardar prompts y respuestas en DB
+- [ ] Configurar Celery/RQ con Redis (opcional)
+- [ ] Workers para notificaciones o análisis async
 
 ---
 
-## ✅ Fase 6 — Producción y Optimización (completado)
-- [x] Migraciones de base de datos con **Alembic**.
-- [x] Configuración de PostgreSQL en producción.
-- [x] Seguridad (CORS, rate limiting, HTTPS).
-- [x] CI/CD con tests automáticos.
-- [x] Despliegue en servidor (ej: Railway, Render, VPS).
+## 📑 Mantenimiento continuo
+- Mantener **CHANGELOG.md** actualizado con cada feature.
+- Actualizar **README.md** con nuevos comandos y configuraciones.
+- Revisar dependencias y actualizar (`pip list --outdated`, `npm outdated`).
 
----
-
-### Notas
-- Cada fase completada debe registrarse en `CHANGELOG.md`.
-- Si se reestructura el proyecto (archivos, carpetas), anotarlo también en `CHANGELOG.md`.

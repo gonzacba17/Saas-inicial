@@ -21,7 +21,12 @@
       "Bash(mv:*)",
       "Bash(ls:*)",
       "Bash(python -m alembic revision:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(alembic revision:*)",
+      "Bash(pip install:*)",
+      "Bash(python3 -m pip install:*)",
+      "Bash(python3:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
