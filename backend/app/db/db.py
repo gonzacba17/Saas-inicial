@@ -305,6 +305,11 @@ class BusinessCRUD:
         return db.query(Business).filter(Business.is_active == True).offset(skip).limit(limit).all()
     
     @staticmethod
+    def get_all_active(db):
+        """Get all active businesses without pagination."""
+        return db.query(Business).filter(Business.is_active == True).all()
+    
+    @staticmethod
     def update(db, business_id, update_data):
         """Update business by ID."""
         db_business = db.query(Business).filter(Business.id == business_id).first()
@@ -689,6 +694,15 @@ class AIConversationCRUD:
             "total_tokens": result.total_tokens or 0,
             "avg_response_time": float(result.avg_response_time or 0)
         }
+    
+    @staticmethod
+    def delete_old_conversations(db, cutoff_date):
+        """Delete conversations older than cutoff_date."""
+        deleted_count = db.query(AIConversation).filter(
+            AIConversation.created_at < cutoff_date
+        ).delete()
+        db.commit()
+        return deleted_count
 
 class PaymentCRUD:
     """CRUD operations for Payment model."""

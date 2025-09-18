@@ -1,5 +1,5 @@
 {
-  "name": "modularbiz-frontend",
+  "name": "saas-cafeterias-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19.1.1",

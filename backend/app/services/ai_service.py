@@ -4,19 +4,33 @@ This service provides intelligent suggestions for products, sales analysis, and 
 """
 import time
 import os
-from typing import Dict, Any, Optional
+import json
+from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from app.db.db import AIConversationCRUD, AIAssistantType, AnalyticsCRUD, ProductCRUD, BusinessCRUD
 from app.schemas import AIQueryRequest
+
+# OpenAI client setup
+try:
+    import openai
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 class AIService:
     """Service for handling AI assistant functionality."""
     
     def __init__(self):
-        # For development, we'll use a mock AI service
-        # In production, this would integrate with OpenAI API
+        """Initialize AI service with OpenAI client."""
         self.api_key = os.getenv("OPENAI_API_KEY")
-        self.mock_mode = not self.api_key or self.api_key == "mock"
+        self.mock_mode = not self.api_key or self.api_key == "mock" or not OPENAI_AVAILABLE
+        
+        if not self.mock_mode and OPENAI_AVAILABLE:
+            self.client = OpenAI(api_key=self.api_key)
+            self.model = "gpt-3.5-turbo"  # Default model
+        else:
+            self.client = None
     
     async def process_query(self, db: Session, user_id: str, query: AIQueryRequest) -> Dict[str, Any]:
         """Process an AI query and return response with metadata."""
@@ -204,22 +218,147 @@ Como asistente de negocio, puedo ayudarte con:
 
 Para brindarte una respuesta más específica, ¿podrías contarme más sobre tu negocio o el aspecto particular que te interesa analizar?"""
     
-    # Placeholder for OpenAI integration
+    # OpenAI integration
     async def _openai_product_suggestions(self, business, products, prompt) -> str:
-        # Here would go the actual OpenAI API call
-        return "OpenAI integration pending - using mock response for now."
+        """Generate product suggestions using OpenAI."""
+        try:
+            product_list = [{"name": p.name, "price": float(p.price), "available": p.available} for p in products[:5]]
+            
+            system_prompt = f"""Eres un experto consultor de negocios especializado en productos para {business.business_type}. 
+            Tu objetivo es ayudar a propietarios de negocios a optimizar su catálogo de productos.
+            
+            Contexto del negocio:
+            - Nombre: {business.name}
+            - Tipo: {business.business_type}
+            - Ubicación: {business.address}
+            - Productos actuales: {json.dumps(product_list, ensure_ascii=False)}
+            
+            Proporciona sugerencias específicas, prácticas y basadas en el análisis del mercado."""
+            
+            user_prompt = f"""Consulta del usuario: {prompt}
+            
+            Por favor, proporciona sugerencias de productos específicas para este negocio. Include:
+            1. Productos recomendados con precios estimados
+            2. Justificación para cada sugerencia
+            3. Estrategias de implementación
+            4. Análisis de demanda potencial"""
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=800,
+                temperature=0.7
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            return f"Error al generar sugerencias con IA: {str(e)}. Intenta nuevamente más tarde."
     
     async def _openai_sales_analysis(self, analytics, daily_sales, prompt) -> str:
-        # Here would go the actual OpenAI API call
-        return "OpenAI integration pending - using mock response for now."
+        """Generate sales analysis using OpenAI."""
+        try:
+            recent_sales = daily_sales[-7:] if len(daily_sales) >= 7 else daily_sales
+            
+            system_prompt = """Eres un analista de ventas experto que ayuda a negocios a entender sus métricas y mejorar su rendimiento.
+            Analiza los datos proporcionados y ofrece insights accionables."""
+            
+            user_prompt = f"""Consulta del usuario: {prompt}
+            
+            Datos de ventas:
+            - Total de órdenes: {analytics['total_orders']}
+            - Órdenes completadas: {analytics['completed_orders']}
+            - Órdenes pendientes: {analytics['pending_orders']}
+            - Ingresos totales: ${analytics['total_revenue']:.2f}
+            - Productos top: {analytics['top_products']}
+            - Ventas últimos 7 días: {json.dumps(recent_sales, ensure_ascii=False)}
+            
+            Proporciona un análisis detallado que incluya:
+            1. Tendencias identificadas
+            2. Oportunidades de mejora
+            3. Recomendaciones específicas
+            4. Métricas clave a monitorear"""
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=800,
+                temperature=0.7
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            return f"Error al generar análisis con IA: {str(e)}. Intenta nuevamente más tarde."
     
     async def _openai_business_insights(self, business, analytics, prompt) -> str:
-        # Here would go the actual OpenAI API call
-        return "OpenAI integration pending - using mock response for now."
+        """Generate business insights using OpenAI."""
+        try:
+            completion_rate = (analytics['completed_orders'] / max(analytics['total_orders'], 1)) * 100
+            
+            system_prompt = f"""Eres un consultor de negocios senior especializado en {business.business_type}.
+            Tu objetivo es proporcionar insights estratégicos que ayuden al crecimiento del negocio."""
+            
+            user_prompt = f"""Consulta del usuario: {prompt}
+            
+            Información del negocio:
+            - Nombre: {business.name}
+            - Tipo: {business.business_type}
+            - Dirección: {business.address}
+            - Tasa de completación: {completion_rate:.1f}%
+            - Ingresos totales: ${analytics['total_revenue']:.2f}
+            - Total órdenes: {analytics['total_orders']}
+            - Productos destacados: {analytics['top_products']}
+            
+            Proporciona insights estratégicos que incluyan:
+            1. Análisis FODA del negocio
+            2. Oportunidades de crecimiento
+            3. Recomendaciones operacionales
+            4. Estrategias de diferenciación
+            5. Plan de acción a corto plazo"""
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=1000,
+                temperature=0.7
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            return f"Error al generar insights con IA: {str(e)}. Intenta nuevamente más tarde."
     
     async def _openai_general_response(self, prompt) -> str:
-        # Here would go the actual OpenAI API call
-        return "OpenAI integration pending - using mock response for now."
+        """Generate general AI response using OpenAI."""
+        try:
+            system_prompt = """Eres un asistente de negocios inteligente especializado en cafeterías y restaurantes.
+            Ayudas a propietarios y gerentes con consultas sobre operaciones, marketing, productos, ventas y estrategia.
+            Proporciona respuestas útiles, específicas y accionables."""
+            
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=600,
+                temperature=0.7
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            return f"Error al procesar consulta con IA: {str(e)}. Intenta nuevamente más tarde."
     
     def _estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (rough approximation)."""

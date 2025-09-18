@@ -1,0 +1,16 @@
+# Development and testing dependencies
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2
+
+# Code quality and security
+flake8==6.1.0
+bandit==1.7.5
+safety==2.3.5
+
+# Type checking
+mypy==1.7.1
+
+# Coverage
+coverage==7.3.2

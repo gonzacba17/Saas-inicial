@@ -89,6 +89,25 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/tests/setup.ts',
     css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json'],
+      exclude: [
+        'node_modules/',
+        'src/tests/',
+        'dist/',
+        '**/*.d.ts',
+        '**/*.config.*'
+      ],
+      thresholds: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80
+        }
+      }
+    }
   },
   
   // Configuración para compatibilidad con Windows

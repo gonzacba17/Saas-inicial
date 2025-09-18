@@ -33,7 +33,7 @@ def health_check():
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to ModularBiz SaaS API"}
+    return {"message": "Welcome to SaaS Cafeterías API"}
 
 if __name__ == "__main__":
     import uvicorn

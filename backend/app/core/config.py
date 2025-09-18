@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # ==============================================
     # INFORMACIÓN DEL PROYECTO
     # ==============================================
-    project_name: str = "ModularBiz SaaS"
+    project_name: str = "SaaS Cafeterías"
     version: str = "1.0.0"
     api_v1_str: str = "/api/v1"
     environment: str = "development"
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # ==============================================
     # CONFIGURACIÓN JWT
     # ==============================================
-    secret_key: str = "modularbiz-saas-super-secret-key-2024-production-ready-minimum-32-chars"
+    secret_key: str = "saas-cafeterias-super-secret-key-2024-production-ready-minimum-32-chars"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS SQLITE (DESARROLLO)
     # ==============================================
-    sqlite_file: str = "modularbiz.db"
+    sqlite_file: str = "saas_cafeterias.db"
     
     @property
     def database_url(self) -> str:

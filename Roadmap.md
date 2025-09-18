@@ -61,23 +61,23 @@
 
 ---
 
-## ⚙️ Sprint 3 — Calidad y CI/CD
+## ⚙️ Sprint 3 — Calidad y CI/CD ✅ COMPLETADO
 
-- [ ] CI en GitHub Actions (`.github/workflows/ci.yml`):
-  - Backend → lint (flake8/ruff), pytest
-  - Frontend → eslint, build, vitest
-- [ ] Agregar checks de seguridad (bandit, safety)
-- [ ] Documentación actualizada (`README.md`, `CHANGELOG.md`, `ROADMAP.md`)
+- [x] CI en GitHub Actions (`.github/workflows/ci.yml`):
+  - Backend → lint (flake8/ruff), pytest ✅
+  - Frontend → eslint, build, vitest ✅
+- [x] Agregar checks de seguridad (bandit, safety) ✅
+- [x] Documentación actualizada (`README.md`, `CHANGELOG.md`, `ROADMAP.md`) ✅
 
 ---
 
-## 🤖 Sprint 4 — IA y features avanzadas
+## 🤖 Sprint 4 — IA y features avanzadas ✅ COMPLETADO
 
-- [ ] Implementar `app/services/ai_service.py`
-- [ ] Endpoint `/api/v1/analytics/insights` que use OpenAI (si configuras key)
-- [ ] Guardar prompts y respuestas en DB
-- [ ] Configurar Celery/RQ con Redis (opcional)
-- [ ] Workers para notificaciones o análisis async
+- [x] Implementar `app/services/ai_service.py` ✅
+- [x] Endpoint `/api/v1/analytics/insights` que use OpenAI (si configuras key) ✅
+- [x] Guardar prompts y respuestas en DB ✅
+- [x] Configurar Celery/RQ con Redis (opcional) ✅
+- [x] Workers para notificaciones o análisis async ✅
 
 ---
 
