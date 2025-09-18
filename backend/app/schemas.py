@@ -289,3 +289,87 @@ class AIResponse(BaseModel):
     conversation_id: UUID
     tokens_used: int
     response_time_ms: int
+
+# ========================================
+# PAYMENT SCHEMAS
+# ========================================
+
+class PaymentStatusEnum(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    AUTHORIZED = "authorized"
+    IN_PROCESS = "in_process"
+    IN_MEDIATION = "in_mediation"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+    CHARGED_BACK = "charged_back"
+
+class PaymentBase(BaseModel):
+    order_id: UUID
+    amount: float
+    currency: str = "ARS"
+
+class PaymentCreate(PaymentBase):
+    user_id: UUID
+    business_id: UUID
+    external_reference: Optional[str] = None
+
+class PaymentUpdate(BaseModel):
+    status: Optional[PaymentStatusEnum] = None
+    mercadopago_payment_id: Optional[str] = None
+    payment_method: Optional[str] = None
+    payment_type: Optional[str] = None
+    transaction_amount: Optional[float] = None
+    net_received_amount: Optional[float] = None
+    total_paid_amount: Optional[float] = None
+    metadata: Optional[str] = None
+    webhook_data: Optional[str] = None
+
+class PaymentInDBBase(PaymentBase):
+    id: UUID
+    user_id: UUID
+    business_id: UUID
+    mercadopago_payment_id: Optional[str] = None
+    preference_id: Optional[str] = None
+    external_reference: Optional[str] = None
+    status: PaymentStatusEnum
+    payment_method: Optional[str] = None
+    payment_type: Optional[str] = None
+    transaction_amount: Optional[float] = None
+    net_received_amount: Optional[float] = None
+    total_paid_amount: Optional[float] = None
+    metadata: Optional[str] = None
+    webhook_data: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    processed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class Payment(PaymentInDBBase):
+    pass
+
+class PaymentInDB(PaymentInDBBase):
+    pass
+
+class PaymentPreference(BaseModel):
+    success: bool
+    preference_id: Optional[str] = None
+    checkout_url: Optional[str] = None
+    sandbox_checkout_url: Optional[str] = None
+    total_amount: float
+    mock: Optional[bool] = False
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+class PaymentWebhookData(BaseModel):
+    action: str
+    api_version: str
+    data: dict
+    date_created: str
+    id: int
+    live_mode: bool
+    type: str
+    user_id: str

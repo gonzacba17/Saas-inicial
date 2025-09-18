@@ -39,6 +39,17 @@ class AIAssistantType(enum.Enum):
     BUSINESS_INSIGHTS = "business_insights"
     GENERAL_QUERY = "general_query"
 
+class PaymentStatus(enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    AUTHORIZED = "authorized"
+    IN_PROCESS = "in_process"
+    IN_MEDIATION = "in_mediation"
+    REJECTED = "rejected"
+    CANCELLED = "cancelled"
+    REFUNDED = "refunded"
+    CHARGED_BACK = "charged_back"
+
 # ========================================
 # DATABASE MODELS
 # ========================================
@@ -112,6 +123,7 @@ class Order(Base):
     user = relationship("User", back_populates="orders")
     business = relationship("Business", back_populates="orders")
     items = relationship("OrderItem", back_populates="order")
+    payments = relationship("Payment", back_populates="order")
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -156,6 +168,45 @@ class AIConversation(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
+    user = relationship("User")
+    business = relationship("Business")
+
+class Payment(Base):
+    __tablename__ = "payments"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
+    
+    # MercadoPago specific fields
+    mercadopago_payment_id = Column(String, unique=True, index=True)
+    preference_id = Column(String, index=True)
+    external_reference = Column(String, index=True)
+    
+    # Payment details
+    amount = Column(Float, nullable=False)
+    currency = Column(String, default="ARS")
+    status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
+    payment_method = Column(String)
+    payment_type = Column(String)
+    
+    # Transaction details
+    transaction_amount = Column(Float)
+    net_received_amount = Column(Float)
+    total_paid_amount = Column(Float)
+    
+    # Metadata
+    metadata = Column(Text)  # JSON string for additional data
+    webhook_data = Column(Text)  # Store webhook payload
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    processed_at = Column(DateTime(timezone=True))
+    
+    # Relationships
+    order = relationship("Order", back_populates="payments")
     user = relationship("User")
     business = relationship("Business")
 
@@ -638,3 +689,75 @@ class AIConversationCRUD:
             "total_tokens": result.total_tokens or 0,
             "avg_response_time": float(result.avg_response_time or 0)
         }
+
+class PaymentCRUD:
+    """CRUD operations for Payment model."""
+    
+    @staticmethod
+    def create(db, payment_data):
+        """Create a new payment record."""
+        db_payment = Payment(**payment_data)
+        db.add(db_payment)
+        db.commit()
+        db.refresh(db_payment)
+        return db_payment
+    
+    @staticmethod
+    def get_by_id(db, payment_id):
+        """Get payment by ID."""
+        return db.query(Payment).filter(Payment.id == payment_id).first()
+    
+    @staticmethod
+    def get_by_order_id(db, order_id):
+        """Get all payments for an order."""
+        return db.query(Payment).filter(Payment.order_id == order_id).all()
+    
+    @staticmethod
+    def get_by_mercadopago_id(db, mercadopago_payment_id):
+        """Get payment by MercadoPago payment ID."""
+        return db.query(Payment).filter(
+            Payment.mercadopago_payment_id == mercadopago_payment_id
+        ).first()
+    
+    @staticmethod
+    def get_by_external_reference(db, external_reference):
+        """Get payment by external reference (order ID)."""
+        return db.query(Payment).filter(
+            Payment.external_reference == external_reference
+        ).first()
+    
+    @staticmethod
+    def update_status(db, payment_id, status, payment_data=None):
+        """Update payment status and optional additional data."""
+        db_payment = db.query(Payment).filter(Payment.id == payment_id).first()
+        if db_payment:
+            db_payment.status = status
+            if payment_data:
+                # Update additional fields from MercadoPago
+                for field, value in payment_data.items():
+                    if hasattr(db_payment, field):
+                        setattr(db_payment, field, value)
+            db.commit()
+            db.refresh(db_payment)
+        return db_payment
+    
+    @staticmethod
+    def get_business_payments(db, business_id, skip=0, limit=100):
+        """Get all payments for a business."""
+        return db.query(Payment).filter(
+            Payment.business_id == business_id
+        ).order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_user_payments(db, user_id, skip=0, limit=100):
+        """Get all payments for a user."""
+        return db.query(Payment).filter(
+            Payment.user_id == user_id
+        ).order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_payments_by_status(db, status, skip=0, limit=100):
+        """Get payments by status."""
+        return db.query(Payment).filter(
+            Payment.status == status
+        ).order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()

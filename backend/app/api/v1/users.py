@@ -11,9 +11,10 @@ from uuid import UUID
 
 # Core imports
 from app.core.config import settings
-from app.db.db import get_db, User, Business, Product, UserBusiness, UserBusinessCRUD, UserBusinessRole, Order, OrderItem, OrderCRUD, OrderItemCRUD, OrderStatus, AnalyticsCRUD, AIConversation, AIConversationCRUD, AIAssistantType
-from app.schemas import Token, UserCreate, User as UserSchema, UserUpdate, Business as BusinessSchema, BusinessCreate, BusinessUpdate, Product as ProductSchema, ProductCreate, ProductUpdate, UserBusiness as UserBusinessSchema, UserBusinessCreate, UserBusinessUpdate, Order as OrderSchema, OrderCreate, OrderUpdate, OrderItem as OrderItemSchema, BusinessAnalytics, DateRangeStats, AIQueryRequest, AIResponse, AIConversation as AIConversationSchema, AIUsageStats
+from app.db.db import get_db, User, Business, Product, UserBusiness, UserBusinessCRUD, UserBusinessRole, Order, OrderItem, OrderCRUD, OrderItemCRUD, OrderStatus, AnalyticsCRUD, AIConversation, AIConversationCRUD, AIAssistantType, Payment, PaymentCRUD, PaymentStatus
+from app.schemas import Token, UserCreate, User as UserSchema, UserUpdate, Business as BusinessSchema, BusinessCreate, BusinessUpdate, Product as ProductSchema, ProductCreate, ProductUpdate, UserBusiness as UserBusinessSchema, UserBusinessCreate, UserBusinessUpdate, Order as OrderSchema, OrderCreate, OrderUpdate, OrderItem as OrderItemSchema, BusinessAnalytics, DateRangeStats, AIQueryRequest, AIResponse, AIConversation as AIConversationSchema, AIUsageStats, Payment as PaymentSchema, PaymentPreference, PaymentWebhookData
 from app.services import verify_token, get_user_by_username, get_user_by_email, authenticate_user, create_access_token, create_user, get_users, get_user, update_user
+from app.services.payment_service import payment_service
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_str}/auth/login")
@@ -613,3 +614,324 @@ def get_business_conversations(
     
     conversations = AIConversationCRUD.get_business_conversations(db, business_id, skip=skip, limit=limit)
     return conversations
+
+# ========================================
+# SALES ANALYTICS ENDPOINTS
+# ========================================
+
+@router.get("/analytics/sales")
+def get_sales_analytics(
+    business_id: Optional[UUID] = Query(None, description="Filter by business ID"),
+    days: int = Query(30, description="Number of days to analyze"),
+    db: Session = Depends(get_db),
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get sales analytics with basic metrics."""
+    from sqlalchemy import func, and_
+    from datetime import datetime, timedelta
+    
+    # Calculate date range
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=days)
+    
+    # Base query for orders
+    query = db.query(Order).filter(
+        and_(
+            Order.created_at >= start_date,
+            Order.created_at <= end_date,
+            Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.DELIVERED])
+        )
+    )
+    
+    # Filter by business if specified and user has permission
+    if business_id:
+        # Verify business exists and user has permissions
+        business = db.query(Business).filter(Business.id == business_id).first()
+        if not business:
+            raise HTTPException(status_code=404, detail="Business not found")
+        
+        require_business_permission(business_id, current_user, db)
+        query = query.filter(Order.business_id == business_id)
+    else:
+        # If no business specified, get all businesses user has access to
+        user_businesses = UserBusinessCRUD.get_user_businesses(db, current_user.id)
+        business_ids = [ub.business_id for ub in user_businesses]
+        if business_ids:
+            query = query.filter(Order.business_id.in_(business_ids))
+        else:
+            # No businesses, return empty analytics
+            return {
+                "period_days": days,
+                "total_sales": 0.0,
+                "total_orders": 0,
+                "average_order_value": 0.0,
+                "daily_sales": [],
+                "top_products": [],
+                "business_name": None
+            }
+    
+    # Get orders
+    orders = query.all()
+    
+    # Calculate basic metrics
+    total_sales = sum(order.total_amount for order in orders)
+    total_orders = len(orders)
+    average_order_value = total_sales / total_orders if total_orders > 0 else 0.0
+    
+    # Calculate daily sales
+    daily_sales_query = db.query(
+        func.date(Order.created_at).label('date'),
+        func.count(Order.id).label('orders'),
+        func.sum(Order.total_amount).label('revenue')
+    ).filter(
+        and_(
+            Order.created_at >= start_date,
+            Order.created_at <= end_date,
+            Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.DELIVERED])
+        )
+    )
+    
+    if business_id:
+        daily_sales_query = daily_sales_query.filter(Order.business_id == business_id)
+    else:
+        if business_ids:
+            daily_sales_query = daily_sales_query.filter(Order.business_id.in_(business_ids))
+    
+    daily_stats = daily_sales_query.group_by(func.date(Order.created_at))\
+                                  .order_by(func.date(Order.created_at)).all()
+    
+    daily_sales = [
+        {
+            "date": stat.date.isoformat(),
+            "orders": stat.orders,
+            "revenue": float(stat.revenue or 0)
+        }
+        for stat in daily_stats
+    ]
+    
+    # Get top products
+    top_products_query = db.query(
+        Product.id,
+        Product.name,
+        func.sum(OrderItem.quantity).label('total_quantity'),
+        func.sum(OrderItem.total_price).label('total_revenue')
+    ).join(OrderItem, Product.id == OrderItem.product_id)\
+     .join(Order, OrderItem.order_id == Order.id)\
+     .filter(
+        and_(
+            Order.created_at >= start_date,
+            Order.created_at <= end_date,
+            Order.status.in_([OrderStatus.CONFIRMED, OrderStatus.DELIVERED])
+        )
+    )
+    
+    if business_id:
+        top_products_query = top_products_query.filter(Order.business_id == business_id)
+    else:
+        if business_ids:
+            top_products_query = top_products_query.filter(Order.business_id.in_(business_ids))
+    
+    top_products = top_products_query.group_by(Product.id, Product.name)\
+                                    .order_by(func.sum(OrderItem.quantity).desc())\
+                                    .limit(5).all()
+    
+    top_products_list = [
+        {
+            "product_id": str(product.id),
+            "product_name": product.name,
+            "total_quantity": int(product.total_quantity),
+            "total_revenue": float(product.total_revenue)
+        }
+        for product in top_products
+    ]
+    
+    # Get business name if specific business
+    business_name = None
+    if business_id:
+        business = db.query(Business).filter(Business.id == business_id).first()
+        business_name = business.name if business else None
+    
+    return {
+        "period_days": days,
+        "total_sales": float(total_sales),
+        "total_orders": total_orders,
+        "average_order_value": float(average_order_value),
+        "daily_sales": daily_sales,
+        "top_products": top_products_list,
+        "business_name": business_name
+    }
+
+# ========================================
+# PAYMENT ENDPOINTS
+# ========================================
+
+@router.post("/payments/create", response_model=PaymentPreference)
+def create_payment_preference(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Create a MercadoPago payment preference for an order."""
+    # Get the order
+    order = OrderCRUD.get_by_id(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Check if user owns the order
+    if order.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to pay for this order")
+    
+    # Check if order already has a successful payment
+    existing_payments = PaymentCRUD.get_by_order_id(db, order_id)
+    if any(p.status == PaymentStatus.APPROVED for p in existing_payments):
+        raise HTTPException(status_code=400, detail="Order already paid")
+    
+    # Get order items
+    order_items = OrderItemCRUD.get_by_order(db, order_id)
+    if not order_items:
+        raise HTTPException(status_code=400, detail="Order has no items")
+    
+    # Prepare items for MercadoPago
+    mp_items = []
+    for item in order_items:
+        product = db.query(Product).filter(Product.id == item.product_id).first()
+        if product:
+            mp_items.append({
+                "id": str(item.product_id),
+                "title": product.name,
+                "quantity": item.quantity,
+                "unit_price": item.unit_price
+            })
+    
+    # Create payment preference
+    preference_result = payment_service.create_payment_preference(
+        order_id=str(order_id),
+        items=mp_items,
+        payer_email=current_user.email
+    )
+    
+    if preference_result["success"]:
+        # Create payment record in database
+        payment_data = {
+            "order_id": order_id,
+            "user_id": current_user.id,
+            "business_id": order.business_id,
+            "amount": order.total_amount,
+            "preference_id": preference_result.get("preference_id"),
+            "external_reference": str(order_id),
+            "status": PaymentStatus.PENDING
+        }
+        PaymentCRUD.create(db, payment_data)
+    
+    return PaymentPreference(**preference_result)
+
+@router.post("/payments/webhook")
+def payment_webhook(
+    webhook_data: PaymentWebhookData,
+    db: Session = Depends(get_db)
+):
+    """Process MercadoPago webhook notifications."""
+    try:
+        # Process webhook with payment service
+        result = payment_service.process_webhook(webhook_data.dict())
+        
+        if result["success"] and not result.get("mock"):
+            # Update payment status in database
+            external_reference = result.get("external_reference")
+            if external_reference:
+                payment = PaymentCRUD.get_by_external_reference(db, external_reference)
+                if payment:
+                    # Update payment with MercadoPago data
+                    payment_update_data = {
+                        "mercadopago_payment_id": result.get("payment_id"),
+                        "status": PaymentStatus(result.get("status", "pending")),
+                        "transaction_amount": result.get("amount"),
+                        "webhook_data": str(webhook_data.dict())
+                    }
+                    
+                    PaymentCRUD.update_status(
+                        db, 
+                        payment.id, 
+                        PaymentStatus(result.get("status", "pending")),
+                        payment_update_data
+                    )
+                    
+                    # If payment is approved, update order status
+                    if result.get("status") == "approved":
+                        OrderCRUD.update_status(db, payment.order_id, OrderStatus.CONFIRMED)
+        
+        return {"status": "ok"}
+    
+    except Exception as e:
+        # Log error but return 200 to MercadoPago to avoid retries
+        print(f"Webhook processing error: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
+@router.get("/payments/orders/{order_id}", response_model=list[PaymentSchema])
+def get_order_payments(
+    order_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get all payments for an order."""
+    # Get the order
+    order = OrderCRUD.get_by_id(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Check if user owns the order or is business owner
+    if order.user_id != current_user.id:
+        if not check_business_permission(order.business_id, current_user, db):
+            raise HTTPException(status_code=403, detail="Not authorized to view payments")
+    
+    payments = PaymentCRUD.get_by_order_id(db, order_id)
+    return payments
+
+@router.get("/payments/status/{payment_id}")
+def get_payment_status(
+    payment_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get payment status from MercadoPago."""
+    # Check if payment exists in our database
+    payment = PaymentCRUD.get_by_mercadopago_id(db, payment_id)
+    if payment:
+        # Check permissions
+        if payment.user_id != current_user.id:
+            if not check_business_permission(payment.business_id, current_user, db):
+                raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Get status from MercadoPago
+    result = payment_service.get_payment_status(payment_id)
+    return result
+
+@router.get("/businesses/{business_id}/payments", response_model=list[PaymentSchema])
+def get_business_payments(
+    business_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get all payments for a business (business owners only)."""
+    # Verify business exists and user has permissions
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    require_business_permission(business_id, current_user, db)
+    
+    payments = PaymentCRUD.get_business_payments(db, business_id, skip=skip, limit=limit)
+    return payments
+
+@router.get("/users/payments", response_model=list[PaymentSchema])
+def get_user_payments(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get all payments for current user."""
+    payments = PaymentCRUD.get_user_payments(db, current_user.id, skip=skip, limit=limit)
+    return payments

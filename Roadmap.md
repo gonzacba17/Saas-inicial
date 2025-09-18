@@ -43,21 +43,21 @@
 
 ---
 
-## 💳 Sprint 2 — Pagos y Dashboard
+## 💳 Sprint 2 — Pagos y Dashboard ✅ COMPLETADO
 
-- [ ] Integrar **MercadoPago sandbox** en backend:
-  - `/api/v1/payments/create`
-  - `/api/v1/payments/webhook`
-- [ ] Configurar `MERCADOPAGO_KEY` en `.env`.
-- [ ] Endpoint `/api/v1/analytics/sales` con métricas básicas.
-- [ ] Frontend: `Dashboard.tsx` con KPIs (ventas, pedidos, top productos).
-- [ ] Seguridad:
-  - SECRET_KEY fuerte
-  - CORS correcto
-  - `.env` ignorado en git
-- [ ] Tests básicos:
-  - Backend (`tests/test_auth.py`, `tests/test_orders.py`)
-  - Frontend (Vitest/RTL en `LoginForm`, `RegisterForm`, `Dashboard`)
+- [x] Integrar **MercadoPago sandbox** en backend:
+  - `/api/v1/payments/create` ✅
+  - `/api/v1/payments/webhook` ✅
+- [x] Configurar `MERCADOPAGO_KEY` en `.env`.
+- [x] Endpoint `/api/v1/analytics/sales` con métricas básicas.
+- [x] Frontend: `Dashboard.tsx` con KPIs (ventas, pedidos, top productos).
+- [x] Seguridad:
+  - SECRET_KEY fuerte ✅
+  - CORS correcto ✅
+  - `.env` ignorado en git ✅
+- [x] Tests básicos:
+  - Backend (`tests/test_auth.py`, `tests/test_orders.py`) ✅
+  - Frontend (Vitest/RTL en `LoginForm`, `RegisterForm`, `Dashboard`) ✅
 
 ---
 
