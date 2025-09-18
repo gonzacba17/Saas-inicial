@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
-from app.db.db import get_db
+from app.db.db import get_db, UserRole
 from app.schemas import User as UserSchema
 from app.api.v1.auth import get_current_user
 from app.services_directory.secrets_service import secrets_manager
@@ -50,7 +50,7 @@ class SecretsBackupResponse(BaseModel):
 
 def check_admin_permission(current_user: UserSchema):
     """Check if user has admin permissions for secrets management"""
-    if not hasattr(current_user, 'role') or current_user.role != 'admin':
+    if not hasattr(current_user, 'role') or current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin role required for secrets management"
