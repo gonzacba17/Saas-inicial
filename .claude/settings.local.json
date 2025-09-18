@@ -28,7 +28,12 @@
       "Bash(python3:*)",
       "Bash(grep:*)",
       "Bash(python -m pip install:*)",
-      "Bash(npm run type-check:*)"
+      "Bash(npm run type-check:*)",
+      "Bash(alembic upgrade:*)",
+      "Bash(python:*)",
+      "Bash(USE_SQLITE=true python3 -m alembic upgrade head)",
+      "Bash(timeout:*)",
+      "Bash(USE_SQLITE=true timeout 10s python3 -c \"import uvicorn; from app.main import app; print(''✓ Starting API server with SQLite...''); uvicorn.run(app, host=''127.0.0.1'', port=8000, log_level=''error'')\")"
     ],
     "deny": []
   }

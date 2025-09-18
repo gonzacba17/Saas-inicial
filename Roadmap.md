@@ -8,81 +8,192 @@
 
 ---
 
-## 🚀 Sprint 1 — MVP funcional (local con PostgreSQL)
+## 🔧 Fase 1: Estabilización de arquitectura ✅ COMPLETADO
 
-### Backend ✅ COMPLETADO
-- [x] Configurar `.env` con conexión a PostgreSQL local.
-- [x] Crear base de datos `saas_db` en PostgreSQL local.
-- [x] Configurar Alembic (`alembic/` + `env.py`).
-- [x] Crear modelos principales en `backend/app/db/models/`:
-  - `User` (UUID, email, hashed password, role).
-  - `Business` (equivalente a Cafe - id, nombre, dueño, dirección).
-  - `Product` (id, nombre, precio, business_id).
-  - `Order` (id, usuario, productos, estado, total).
-- [x] Generar migraciones iniciales (`alembic revision --autogenerate` + `alembic upgrade head`).
-- [x] Implementar endpoints Auth:
+### Refactorización y estructura
+- [x] Separar routers en archivos individuales (`auth.py`, `businesses.py`, `products.py`, `orders.py`, `payments.py`, `analytics.py`, `ai.py`)
+- [x] Implementar sistema de roles y permisos (`admin`, `business_owner`, `customer`)
+- [x] Configurar Alembic correctamente (`alembic/` + `env.py`)
+- [x] Crear migración para campo `role` en usuarios
+- [x] Generar `.env.example` con todas las variables necesarias
+- [x] Crear tests unitarios básicos para endpoints principales
+- [x] Implementar manejo de errores consistente
+- [x] Documentar API con OpenAPI/Swagger automático
+
+### Base de datos y modelos
+- [x] Configurar conexión a PostgreSQL local
+- [x] Crear base de datos `saas_db`
+- [x] Modelos principales: `User`, `Business`, `Product`, `Order`
+- [x] Relaciones correctas entre modelos
+- [x] Migraciones iniciales funcionando
+
+---
+
+## 🚀 Fase 2: Funcionalidades base SaaS ✅ COMPLETADO
+
+### Backend - API completa
+- [x] Sistema de autenticación JWT completo:
   - `/api/v1/auth/register`
   - `/api/v1/auth/login`
   - `/api/v1/auth/refresh`
   - `/api/v1/auth/me`
-- [x] CRUD básico:
+- [x] CRUD completo de negocios:
   - `/api/v1/businesses` (crear, listar, actualizar, eliminar)
+  - Filtros por dueño y permisos
+- [x] CRUD completo de productos:
   - `/api/v1/products` (crear, listar, actualizar, eliminar)
-- [x] Orders:
-  - `/api/v1/orders` (crear orden, ver estado, gestión completa)
+  - Asociación con negocios
+- [x] Sistema de órdenes:
+  - `/api/v1/orders` (crear, listar, actualizar estado)
+  - Estados: pending, confirmed, completed, cancelled
+- [x] Gestión de usuarios con roles
 
-### Frontend ✅ COMPLETADO
-- [x] Conectar formularios **Login/Register** con backend real.
-- [x] Crear vistas:
-  - Listado de negocios (equivalente a cafés) ✅
-  - Listado de productos ✅
-  - Carrito (Zustand store) ✅
-  - Checkout (funcional con backend real) ✅
-- [x] Manejo de sesión (guardar JWT, refrescar token, logout).
-- [x] Proteger rutas que requieran login.
-
----
-
-## 💳 Sprint 2 — Pagos y Dashboard ✅ COMPLETADO
-
-- [x] Integrar **MercadoPago sandbox** en backend:
-  - `/api/v1/payments/create` ✅
-  - `/api/v1/payments/webhook` ✅
-- [x] Configurar `MERCADOPAGO_KEY` en `.env`.
-- [x] Endpoint `/api/v1/analytics/sales` con métricas básicas.
-- [x] Frontend: `Dashboard.tsx` con KPIs (ventas, pedidos, top productos).
-- [x] Seguridad:
-  - SECRET_KEY fuerte ✅
-  - CORS correcto ✅
-  - `.env` ignorado en git ✅
-- [x] Tests básicos:
-  - Backend (`tests/test_auth.py`, `tests/test_orders.py`) ✅
-  - Frontend (Vitest/RTL en `LoginForm`, `RegisterForm`, `Dashboard`) ✅
+### Frontend - Dashboard funcional
+- [x] Autenticación completa (login/register/logout)
+- [x] Dashboard con métricas básicas
+- [x] Gestión de negocios (CRUD)
+- [x] Gestión de productos (CRUD)
+- [x] Sistema de carrito (Zustand store)
+- [x] Checkout funcional
+- [x] Protección de rutas por roles
+- [x] Manejo de estados de carga y errores
 
 ---
 
-## ⚙️ Sprint 3 — Calidad y CI/CD ✅ COMPLETADO
+## 💳 Fase 3: Pagos seguros ✅ COMPLETADO
 
-- [x] CI en GitHub Actions (`.github/workflows/ci.yml`):
-  - Backend → lint (flake8/ruff), pytest ✅
-  - Frontend → eslint, build, vitest ✅
-- [x] Agregar checks de seguridad (bandit, safety) ✅
-- [x] Documentación actualizada (`README.md`, `CHANGELOG.md`, `ROADMAP.md`) ✅
+### Integración MercadoPago
+- [x] Configurar MercadoPago SDK en backend
+- [x] Endpoint `/api/v1/payments/create` con validaciones
+- [x] Webhook `/api/v1/payments/webhook` con verificación de firma
+- [x] Implementar idempotencia en transacciones
+- [x] Manejo de estados de pago (pending, approved, rejected)
+- [x] Logs de transacciones para auditoría
+- [x] Tests para flujo completo de pagos
+- [x] Configuración sandbox para desarrollo
+- [x] Frontend integrado con flujo de pago
+
+### Analytics básicos
+- [x] Endpoint `/api/v1/analytics/sales` con métricas
+- [x] Dashboard con KPIs de ventas
+- [x] Reportes por fechas y negocios
 
 ---
 
-## 🤖 Sprint 4 — IA y features avanzadas ✅ COMPLETADO
+## 🎨 Fase 4: Frontend UX/UI refinado + despliegue ✅ COMPLETADO
 
-- [x] Implementar `app/services/ai_service.py` ✅
-- [x] Endpoint `/api/v1/analytics/insights` que use OpenAI (si configuras key) ✅
-- [x] Guardar prompts y respuestas en DB ✅
-- [x] Configurar Celery/RQ con Redis (opcional) ✅
-- [x] Workers para notificaciones o análisis async ✅
+### Calidad y testing
+- [x] Tests unitarios backend (pytest)
+- [x] Tests frontend (Vitest + React Testing Library)
+- [x] Linting y formateo (ruff, eslint, prettier)
+- [x] CI/CD pipeline en GitHub Actions
+- [x] Checks de seguridad (bandit, safety)
+
+### Documentación
+- [x] README.md completo con instrucciones
+- [x] CHANGELOG.md mantenido
+- [x] Documentación API automática
 
 ---
 
-## 📑 Mantenimiento continuo
-- Mantener **CHANGELOG.md** actualizado con cada feature.
-- Actualizar **README.md** con nuevos comandos y configuraciones.
-- Revisar dependencias y actualizar (`pip list --outdated`, `npm outdated`).
+## 🤖 Fase 5: Integraciones IA ✅ COMPLETADO
+
+### Servicios inteligentes
+- [x] Integración con OpenAI para insights de negocio
+- [x] Endpoint `/api/v1/ai/insights` para análisis automático
+- [x] Workers asíncronos para tareas pesadas (Celery/Redis)
+- [x] Almacenamiento de prompts y respuestas
+- [x] Rate limiting para APIs externas
+
+---
+
+## 🔄 Fase 6: Escalabilidad y producción ✅ COMPLETADO
+
+### Infraestructura
+- [x] Containerización completa (Docker + Docker Compose)
+- [x] Configuración para diferentes entornos (dev, staging, prod)
+- [x] Load balancer y reverse proxy (Nginx)
+- [x] Base de datos: configuración para producción
+- [x] Sistema de backups automáticos
+- [x] Monitorización (logs, métricas, alertas)
+- [x] SSL/TLS certificates automáticos
+
+### Performance y seguridad
+- [x] Rate limiting por usuario/IP
+- [x] Caché con Redis para consultas frecuentes
+- [x] Optimización de queries (índices, N+1)
+- [x] Validación estricta de inputs
+- [x] Audit logs para acciones críticas
+- [x] Implementar OWASP security headers
+
+### DevOps avanzado
+- [x] Pipeline CD automático a staging/producción
+- [x] Health checks y monitoring
+- [x] Rollback automático en caso de fallos
+- [x] Blue-green deployment (configurado en scripts)
+- [x] Secrets management (AWS Secrets/HashiCorp Vault)
+
+---
+
+## 🚀 Fase 7: Features B2C avanzadas (FUTURO)
+
+### Experiencia de usuario
+- [ ] Sistema de notificaciones (email, push, SMS)
+- [ ] Multi-tenancy completo
+- [ ] API pública para integraciones terceros
+- [ ] Sistema de subscripciones/planes
+- [ ] Marketplace entre negocios
+- [ ] App móvil (React Native/Flutter)
+
+### Analytics avanzados
+- [ ] Dashboard de métricas en tiempo real
+- [ ] Segmentación de usuarios
+- [ ] A/B testing framework
+- [ ] Reportes personalizados
+- [ ] Exportación de datos (CSV, PDF, API)
+- [ ] Integración con Google Analytics/Mixpanel
+
+### IA y automatización
+- [ ] Recomendaciones personalizadas
+- [ ] Chat support automatizado
+- [ ] Predicciones de demanda
+- [ ] Detección de fraude
+- [ ] Optimización automática de precios
+
+---
+
+## 📋 Mantenimiento continuo
+
+### Calidad de código
+- [ ] Mantener cobertura de tests > 80%
+- [ ] Code reviews obligatorios
+- [ ] Refactoring regular (deuda técnica)
+- [ ] Actualización de dependencias (automatizada)
+- [ ] Documentación API actualizada
+
+### Seguridad
+- [ ] Auditorías de seguridad regulares
+- [ ] Penetration testing trimestral
+- [ ] Actualización de parches críticos
+- [ ] Revisión de permisos y accesos
+- [ ] Backup testing mensual
+
+### Documentación y comunicación
+- [ ] Mantener **CHANGELOG.md** actualizado con cada feature
+- [ ] Actualizar **README.md** con nuevos comandos y configuraciones
+- [ ] Revisar dependencias (`pip list --outdated`, `npm outdated`)
+- [ ] Release notes para cada versión
+- [ ] Wiki técnico interno actualizado
+
+### Proceso de desarrollo
+Cada vez que se complete una fase, documentar el progreso en `CHANGELOG.md` con el formato:
+
+```
+[YYYY-MM-DD] - feat(roadmap): completada Fase X - [nombre]
+
+Lista breve de tareas completadas
+- Tarea 1
+- Tarea 2
+- Tarea 3
+```
 

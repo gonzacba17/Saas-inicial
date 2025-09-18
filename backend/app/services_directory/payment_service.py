@@ -2,7 +2,12 @@
 Payment service using MercadoPago SDK for handling payments.
 Provides sandbox integration for testing and production ready functionality.
 """
-import mercadopago
+try:
+    import mercadopago
+    MERCADOPAGO_AVAILABLE = True
+except ImportError:
+    MERCADOPAGO_AVAILABLE = False
+    
 from typing import Dict, Any, Optional
 from app.core.config import settings
 import uuid
@@ -16,11 +21,14 @@ class PaymentService:
     def __init__(self):
         """Initialize MercadoPago SDK with access token."""
         self.sdk = None
-        if settings.mercadopago_key:
+        if MERCADOPAGO_AVAILABLE and settings.mercadopago_key:
             self.sdk = mercadopago.SDK(settings.mercadopago_key)
             logger.info("MercadoPago SDK initialized successfully")
         else:
-            logger.warning("MercadoPago access token not configured")
+            if not MERCADOPAGO_AVAILABLE:
+                logger.warning("MercadoPago SDK not installed - using mock service")
+            else:
+                logger.warning("MercadoPago access token not configured")
     
     def create_payment_preference(
         self,

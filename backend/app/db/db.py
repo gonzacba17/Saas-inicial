@@ -54,6 +54,12 @@ class PaymentStatus(enum.Enum):
 # DATABASE MODELS
 # ========================================
 
+class UserRole(enum.Enum):
+    """User roles for system-wide permissions."""
+    USER = "user"
+    OWNER = "owner"  
+    ADMIN = "admin"
+
 class User(Base):
     __tablename__ = "users"
     
@@ -61,6 +67,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -197,7 +204,7 @@ class Payment(Base):
     total_paid_amount = Column(Float)
     
     # Metadata
-    metadata = Column(Text)  # JSON string for additional data
+    payment_metadata = Column(Text)  # JSON string for additional data
     webhook_data = Column(Text)  # Store webhook payload
     
     # Timestamps

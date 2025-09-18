@@ -2,11 +2,15 @@
 Unified Pydantic schemas for all models.
 All data validation and serialization schemas consolidated in one file for simplicity.
 """
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
 from enum import Enum
+from app.middleware.validation import (
+    StrictValidationMixin, validate_business_name, validate_product_name, 
+    validate_price, validate_description, validate_password, InputSanitizer
+)
 
 # ========================================
 # TOKEN SCHEMAS
@@ -23,12 +27,32 @@ class TokenData(BaseModel):
 # USER SCHEMAS
 # ========================================
 
-class UserBase(BaseModel):
+class UserBase(BaseModel, StrictValidationMixin):
     email: EmailStr
     username: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        return InputSanitizer.validate_email(v)
+    
+    @field_validator('username')
+    @classmethod
+    def validate_username(cls, v):
+        v = InputSanitizer.sanitize_string(v, max_length=50)
+        if len(v) < 3:
+            raise ValueError("Username must be at least 3 characters long")
+        if not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError("Username can only contain letters, numbers, hyphens and underscores")
+        return v
 
 class UserCreate(UserBase):
     password: str
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password(cls, v):
+        return validate_password(v)
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None

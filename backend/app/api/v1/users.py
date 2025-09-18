@@ -11,32 +11,9 @@ from uuid import UUID
 
 # Core imports
 from app.core.config import settings
-
-# Database imports
-from app.db.db import (
-    get_db, User, Business, Product, UserBusiness, Order, OrderItem,
-    UserBusinessCRUD, UserBusinessRole, OrderCRUD, OrderItemCRUD, OrderStatus,
-    AnalyticsCRUD, AIConversation, AIConversationCRUD, AIAssistantType,
-    Payment, PaymentCRUD, PaymentStatus
-)
-
-# Schema imports
-from app.schemas import (
-    Token, UserCreate, User as UserSchema, UserUpdate,
-    Business as BusinessSchema, BusinessCreate, BusinessUpdate,
-    Product as ProductSchema, ProductCreate, ProductUpdate,
-    UserBusiness as UserBusinessSchema, UserBusinessCreate, UserBusinessUpdate,
-    Order as OrderSchema, OrderCreate, OrderUpdate,
-    OrderItem as OrderItemSchema, BusinessAnalytics, DateRangeStats,
-    AIQueryRequest, AIResponse, AIConversation as AIConversationSchema,
-    AIUsageStats, Payment as PaymentSchema, PaymentPreference, PaymentWebhookData
-)
-
-# Service imports
-from app.services import (
-    verify_token, get_user_by_username, get_user_by_email, authenticate_user,
-    create_access_token, create_user, get_users, get_user, update_user
-)
+from app.db.db import get_db, User, Business, Product, UserBusiness, UserBusinessCRUD, UserBusinessRole, Order, OrderItem, OrderCRUD, OrderItemCRUD, OrderStatus, AnalyticsCRUD, AIConversation, AIConversationCRUD, AIAssistantType, Payment, PaymentCRUD, PaymentStatus
+from app.schemas import Token, UserCreate, User as UserSchema, UserUpdate, Business as BusinessSchema, BusinessCreate, BusinessUpdate, Product as ProductSchema, ProductCreate, ProductUpdate, UserBusiness as UserBusinessSchema, UserBusinessCreate, UserBusinessUpdate, Order as OrderSchema, OrderCreate, OrderUpdate, OrderItem as OrderItemSchema, BusinessAnalytics, DateRangeStats, AIQueryRequest, AIResponse, AIConversation as AIConversationSchema, AIUsageStats, Payment as PaymentSchema, PaymentPreference, PaymentWebhookData
+from app.services import verify_token, get_user_by_username, get_user_by_email, authenticate_user, create_access_token, create_user, get_users, get_user, update_user
 from app.services.payment_service import payment_service
 
 router = APIRouter()
@@ -571,7 +548,7 @@ async def chat_with_ai(query: AIQueryRequest, db: Session = Depends(get_db), cur
         require_business_permission(query.business_id, current_user, db)
     
     # Process AI query
-    result = await ai_service.process_query(db, str(current_user.id), query)
+    result = await ai_service.process_query(db, current_user.id, query)
     return result
 
 @router.get("/ai/conversations", response_model=List[AIConversationSchema])
@@ -783,164 +760,6 @@ def get_sales_analytics(
         "top_products": top_products_list,
         "business_name": business_name
     }
-
-@router.post("/analytics/insights")
-async def generate_business_insights(
-    business_id: UUID = Query(..., description="Business ID to analyze"),
-    insight_type: str = Query("general", description="Type of insights: general, sales, products, or growth"),
-    prompt: str = Query(..., description="Specific question or area to analyze"),
-    db: Session = Depends(get_db),
-    current_user: UserSchema = Depends(get_current_user)
-):
-    """Generate AI-powered business insights using OpenAI."""
-    from app.services.ai_service import ai_service
-    from app.schemas import AIQueryRequest
-    
-    # Verify business exists and user has permissions
-    business = db.query(Business).filter(Business.id == business_id).first()
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found")
-    
-    if not check_business_permission(business_id, current_user, db, [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]):
-        raise HTTPException(status_code=403, detail="Not authorized to access this business")
-    
-    # Map insight types to assistant types
-    type_mapping = {
-        "products": AIAssistantType.PRODUCT_SUGGESTION,
-        "sales": AIAssistantType.SALES_ANALYSIS,
-        "general": AIAssistantType.BUSINESS_INSIGHTS,
-        "growth": AIAssistantType.BUSINESS_INSIGHTS
-    }
-    
-    assistant_type = type_mapping.get(insight_type, AIAssistantType.BUSINESS_INSIGHTS)
-    
-    # Create AI query request
-    ai_query = AIQueryRequest(
-        prompt=prompt,
-        business_id=business_id,
-        assistant_type=assistant_type
-    )
-    
-    try:
-        # Process the query with AI service
-        result = await ai_service.process_query(db, str(current_user.id), ai_query)
-        
-        return {
-            "business_id": str(business_id),
-            "business_name": business.name,
-            "insight_type": insight_type,
-            "prompt": prompt,
-            "insights": result["response"],
-            "conversation_id": str(result["conversation_id"]),
-            "tokens_used": result["tokens_used"],
-            "response_time_ms": result["response_time_ms"],
-            "timestamp": OrderCRUD.get_current_timestamp().isoformat()
-        }
-    
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Error generating insights: {str(e)}"
-        )
-
-@router.post("/analytics/generate-report")
-async def generate_business_report_async(
-    business_id: UUID = Query(..., description="Business ID to generate report for"),
-    report_type: str = Query("daily", description="Type of report: daily, weekly, monthly"),
-    db: Session = Depends(get_db),
-    current_user: UserSchema = Depends(get_current_user)
-):
-    """Generate comprehensive business report using background worker."""
-    # Verify business exists and user has permissions
-    business = db.query(Business).filter(Business.id == business_id).first()
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found")
-    
-    if not check_business_permission(business_id, current_user, db, [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]):
-        raise HTTPException(status_code=403, detail="Not authorized to access this business")
-    
-    try:
-        # Check if Celery is available
-        from app.services.celery_tasks import generate_business_report
-        
-        # Queue the report generation task
-        task = generate_business_report.delay(str(business_id), report_type)
-        
-        return {
-            "message": "Report generation started",
-            "task_id": task.id,
-            "business_id": str(business_id),
-            "business_name": business.name,
-            "report_type": report_type,
-            "status": "queued",
-            "check_status_url": f"/api/v1/tasks/{task.id}/status"
-        }
-        
-    except (ImportError, Exception) as e:
-        # Fallback to synchronous generation if Celery not available
-        try:
-            from app.services.celery_tasks import generate_business_report
-            from app.db.db import get_db
-            
-            with next(get_db()) as db_session:
-                task_instance = generate_business_report(bind=True)
-                result = task_instance.run(db_session, str(business_id), report_type)
-                
-            return {
-                "message": "Report generated synchronously",
-                "business_id": str(business_id),
-                "business_name": business.name,
-                "report_type": report_type,
-                "status": "completed",
-                "report": result.get("report") if result.get("status") == "success" else None,
-                "error": result.get("error") if result.get("status") == "error" else None
-            }
-        except Exception:
-            raise HTTPException(
-                status_code=503,
-                detail="Report generation service temporarily unavailable"
-            )
-
-@router.get("/tasks/{task_id}/status")
-def get_task_status(task_id: str):
-    """Get status of background task."""
-    try:
-        from app.services.celery_app import celery_app
-        
-        task = celery_app.AsyncResult(task_id)
-        
-        if task.state == "PENDING":
-            response = {
-                "task_id": task_id,
-                "status": "pending",
-                "message": "Task is waiting to be processed"
-            }
-        elif task.state == "SUCCESS":
-            response = {
-                "task_id": task_id,
-                "status": "completed",
-                "result": task.result
-            }
-        elif task.state == "FAILURE":
-            response = {
-                "task_id": task_id,
-                "status": "failed",
-                "error": str(task.info)
-            }
-        else:
-            response = {
-                "task_id": task_id,
-                "status": task.state.lower(),
-                "message": f"Task is {task.state.lower()}"
-            }
-            
-        return response
-        
-    except ImportError:
-        raise HTTPException(
-            status_code=503, 
-            detail="Background task system not available"
-        )
 
 # ========================================
 # PAYMENT ENDPOINTS

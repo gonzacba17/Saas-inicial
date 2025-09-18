@@ -53,12 +53,32 @@ class Settings(BaseSettings):
             return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
     
     # ==============================================
-    # CONFIGURACIÓN REDIS (OPCIONAL)
+    # CONFIGURACIÓN REDIS
     # ==============================================
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
     redis_url: str = "redis://localhost:6379/0"
+    
+    # Redis Cache Configuration
+    cache_default_ttl: int = 300  # 5 minutes
+    cache_long_ttl: int = 3600   # 1 hour
+    cache_short_ttl: int = 60    # 1 minute
+    
+    # ==============================================
+    # SECRETS MANAGEMENT
+    # ==============================================
+    secrets_backend: str = "environment"  # environment, file, vault, aws
+    secrets_dir: str = "secrets"
+    
+    # HashiCorp Vault
+    vault_url: Optional[str] = None
+    vault_token: Optional[str] = None
+    vault_mount_point: str = "secret"
+    
+    # AWS Secrets Manager
+    aws_region: str = "us-east-1"
+    aws_profile: Optional[str] = None
     
     # ==============================================
     # CONFIGURACIÓN DE SEGURIDAD
