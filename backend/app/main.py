@@ -2,14 +2,21 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.api.v1 import api
 from app.middleware.security import setup_security_middleware
+from app.middleware.error_handler import setup_error_handlers
 from app.db.db import create_tables
 
 app = FastAPI(
     title=settings.project_name,
     version=settings.version,
     openapi_url=f"{settings.api_v1_str}/openapi.json",
-    debug=settings.debug
+    debug=settings.debug,
+    description="🚀 Cafeteria IA - Sistema SaaS completo para gestión de cafeterías",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
+
+# Setup error handling (debe ir primero)
+setup_error_handlers(app, debug=settings.debug)
 
 # Setup security middleware
 setup_security_middleware(app)

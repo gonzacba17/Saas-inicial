@@ -27,10 +27,28 @@ venv/
 env/
 ENV/
 
-# Environment variables
+# Environment variables (CRÍTICO - NUNCA SUBIR ESTOS ARCHIVOS)
 .env
 .env.local
 .env.production
+.env.staging
+.env.development
+.env.test
+*.env
+!.env.example
+!.env.*.example
+
+# Secretos y configuraciones sensibles
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+config/local.json
+config/production.json
+auth_keys/
+certificates/
 
 # Database
 *.db

@@ -1,0 +1,72 @@
+🧪 CAFETERIA IA - REPORTE DE TESTING COMPLETO
+================================================================================
+📊 RESUMEN EJECUTIVO
+   Fecha: 2025-09-22 16:10:39
+   Tiempo total: 18.08s
+   Tests ejecutados: 20
+   Tests exitosos: 14
+   Tests fallidos: 6
+   Tasa de éxito: 70.0%
+
+🔧 Entorno
+   Éxito: 2/2 (100.0%)
+   ✅ Configuración del entorno (0.01s)
+   ✅ Importaciones y dependencias (6.24s)
+
+🔒 Seguridad
+   Éxito: 3/3 (100.0%)
+   ✅ Configuración de seguridad (0.00s)
+   ✅ Sistema de hash de contraseñas (0.75s)
+   ✅ Configuración CORS (0.68s)
+
+💾 Base de Datos
+   Éxito: 2/3 (66.7%)
+   ✅ Conexión a base de datos (0.05s)
+   ✅ Usuario admin existe (0.00s)
+   ❌ Integridad de datos (0.01s)
+      Error: No hay usuarios admin en la BD
+
+🔐 Autenticación
+   Éxito: 3/4 (75.0%)
+   ✅ Login de admin (0.97s)
+   ❌ Validación JWT (0.66s)
+      Error: Validación JWT falló: 500
+   ✅ Registro de usuario (1.14s)
+   ✅ Rechazo credenciales inválidas (0.89s)
+
+👮 Autorización
+   Éxito: 1/2 (50.0%)
+   ✅ Bloqueo acceso no autorizado (0.67s)
+   ❌ Permisos basados en roles (0.66s)
+      Error: Usuario normal pudo acceder a endpoint admin: 307
+
+🏢 Lógica de Negocio
+   Éxito: 0/2 (0.0%)
+   ❌ CRUD de negocios (0.66s)
+      Error: Error creando negocio: 307
+   ❌ CRUD de productos (0.00s)
+      Error: Token admin o business_id no disponible
+
+🌐 API Endpoints
+   Éxito: 2/2 (100.0%)
+   ✅ Servidor backend corriendo (0.69s)
+   ✅ Documentación API accesible (0.72s)
+
+⚡ Rendimiento
+   Éxito: 0/1 (0.0%)
+   ❌ Tiempos de respuesta API (0.66s)
+      Error: Endpoint /api/v1/auth/me falló: 500
+
+🖥️ Frontend
+   Éxito: 1/1 (100.0%)
+   ✅ Accesibilidad del frontend (2.64s)
+
+📋 RECOMENDACIONES
+   ⚠️  6 tests fallaron. Revisar errores arriba.
+   🔧 Corregir problemas antes de continuar.
+
+💡 PRÓXIMOS PASOS
+   1. Si hay fallos, revisar logs detallados arriba
+   2. Verificar que backend y frontend estén corriendo
+   3. Ejecutar tests individuales si es necesario
+   4. Repetir testing después de correcciones
