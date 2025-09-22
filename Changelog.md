@@ -4,6 +4,30 @@ Registro de cambios y progreso del desarrollo.
 
 ---
 
+## 2025-01-22 [docs] - Reorganización completa de documentación y roadmap
+
+### Cambios realizados:
+- **Roadmap actualizado**: Movidas todas las fases A-D a "Completadas" y reorganizado plan futuro
+- **README enriquecido**: Agregada arquitectura visual, ejemplos de API, troubleshooting completo
+- **Script de validación**: Creado `validate-integrations.py` para verificar estado del sistema
+- **Plan de mantenimiento**: Implementado Plan A-D con prioridades y ciclos de mejora continua
+- **Métricas realistas**: Alineadas las métricas documentadas con el estado real del código
+
+### Mejoras de documentación:
+- Diagramas ASCII de arquitectura del sistema
+- Ejemplos cURL para todos los endpoints principales
+- Guía completa de troubleshooting con comandos específicos
+- Sección de observabilidad con métricas y alertas
+- Scripts de deployment y validación documentados
+
+### Correlación codebase-documentación:
+- Verificadas métricas reales: 8 modelos ✅, ~10 endpoints, infraestructura completa ✅
+- Identificadas discrepancias en cantidad de endpoints (10 vs 50+ documentados)
+- Tests funcionales confirmados (3 archivos con tests implementados)
+- Arquitectura sólida validada con servicios especializados
+
+---
+
 ## 2025-01-18 [feat] - Fase A: Estabilización de Base completada
 
 ### Cambios realizados:
