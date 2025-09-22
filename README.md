@@ -22,16 +22,26 @@ source venv/bin/activate  # Linux/Mac
 # Instalar dependencias
 pip install -r requirements.txt
 
-# Configurar variables de entorno
-cp .env.example .env
-# Editar .env con tus configuraciones
+# Configurar variables de entorno (para desarrollo local)
+cp .env.example .env.local
+# Editar .env.local con configuraciones locales
 
-# Configurar base de datos
-alembic upgrade head
+# Configurar base de datos y crear usuario admin
+python create_admin.py
 
 # Iniciar servidor
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload
 ```
+
+#### 👤 Usuario Admin de Prueba
+
+Para desarrollo local, ya existe un usuario administrador:
+
+- **Email**: `admin@saas.test`
+- **Contraseña**: `Admin1234!`
+- **Rol**: Administrador con permisos completos
+
+> ⚠️ **Importante**: Este usuario es solo para desarrollo local. En producción debe configurarse un admin diferente.
 
 ### 2. Frontend Setup
 
