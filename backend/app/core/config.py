@@ -6,7 +6,7 @@ import os
 class Settings(BaseSettings):
     # Configuración del modelo para cargar variables de entorno
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env.local", ".env"],
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"  # Ignora variables extra en el .env
@@ -42,9 +42,15 @@ class Settings(BaseSettings):
     # ==============================================
     sqlite_file: str = "saas_cafeterias.db"
     
+    # Direct DATABASE_URL support
+    database_url: Optional[str] = None
+    
     @property
-    def database_url(self) -> str:
+    def db_url(self) -> str:
         """Construye la URL de conexión a la base de datos"""
+        # Use DATABASE_URL if provided in environment
+        if self.database_url:
+            return self.database_url
         # Verificar si PostgreSQL está disponible, sino usar SQLite
         if os.getenv("USE_SQLITE", "false").lower() == "true":
             return f"sqlite:///./{self.sqlite_file}"

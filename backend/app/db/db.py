@@ -4,15 +4,48 @@ All database-related functionality consolidated in one file for simplicity.
 """
 import uuid
 import enum
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime, Text, Integer, Float, ForeignKey, Enum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import create_engine, Column, String, Boolean, DateTime, Text, Integer, Float, ForeignKey, Enum, TypeDecorator, CHAR
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from app.core.config import settings
 
+# Custom UUID type that works with both PostgreSQL and SQLite
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+    Uses PostgreSQL's UUID type when available, otherwise uses CHAR(36) for SQLite.
+    """
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PGUUID())
+        else:
+            return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        elif dialect.name == 'postgresql':
+            return str(value)
+        else:
+            if not isinstance(value, uuid.UUID):
+                return str(uuid.UUID(value))
+            else:
+                return str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            if not isinstance(value, uuid.UUID):
+                return uuid.UUID(value)
+            return value
+
 # Database setup
-engine = create_engine(settings.database_url)
+engine = create_engine(settings.db_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -63,7 +96,7 @@ class UserRole(enum.Enum):
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -80,7 +113,7 @@ class User(Base):
 class Business(Base):
     __tablename__ = "businesses"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
     name = Column(String, nullable=False, index=True)
     description = Column(Text)
     address = Column(String)
@@ -99,8 +132,8 @@ class Business(Base):
 class Product(Base):
     __tablename__ = "products"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
     name = Column(String, nullable=False, index=True)
     description = Column(Text)
     price = Column(Float, nullable=False)
@@ -117,9 +150,9 @@ class Product(Base):
 class Order(Base):
     __tablename__ = "orders"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING)
     total_amount = Column(Float, nullable=False)
     notes = Column(Text)
@@ -135,9 +168,9 @@ class Order(Base):
 class OrderItem(Base):
     __tablename__ = "order_items"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False)
-    product_id = Column(UUID(as_uuid=True), ForeignKey("products.id"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False)
+    product_id = Column(GUID(), ForeignKey("products.id"), nullable=False)
     quantity = Column(Integer, nullable=False, default=1)
     unit_price = Column(Float, nullable=False)
     total_price = Column(Float, nullable=False)
@@ -149,9 +182,9 @@ class OrderItem(Base):
 class UserBusiness(Base):
     __tablename__ = "user_businesses"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
     role = Column(Enum(UserBusinessRole), default=UserBusinessRole.OWNER)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -164,9 +197,9 @@ class UserBusiness(Base):
 class AIConversation(Base):
     __tablename__ = "ai_conversations"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=True)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=True)
     assistant_type = Column(Enum(AIAssistantType), nullable=False)
     prompt = Column(Text, nullable=False)
     response = Column(Text, nullable=False)
@@ -181,10 +214,10 @@ class AIConversation(Base):
 class Payment(Base):
     __tablename__ = "payments"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id"), nullable=False)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    business_id = Column(UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    order_id = Column(GUID(), ForeignKey("orders.id"), nullable=False)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
     
     # MercadoPago specific fields
     mercadopago_payment_id = Column(String, unique=True, index=True)

@@ -62,6 +62,7 @@ class UserUpdate(BaseModel):
 
 class UserInDBBase(UserBase):
     id: UUID
+    role: str
     is_active: bool
     is_superuser: bool
     created_at: datetime
