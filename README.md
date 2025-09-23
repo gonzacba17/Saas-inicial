@@ -1,458 +1,256 @@
-# SaaS Cafeterías - Plataforma de Gestión Integral
+# 🚀 SaaS Cafeterías - Sistema de Gestión Integral
 
-Sistema SaaS completo para gestión de cafeterías con autenticación, pagos, analytics y arquitectura escalable.
+Sistema SaaS completo para gestión de cafeterías con autenticación JWT, pagos seguros, IA conversacional y arquitectura escalable production-ready.
+
+## 📋 Índice de Contenido
+
+- [🚀 Inicio Rápido](#-inicio-rápido)
+- [👤 Credenciales de Desarrollo](#-credenciales-de-desarrollo)
+- [🏗️ Arquitectura del Sistema](#-arquitectura-del-sistema)
+- [🛠️ Scripts y Comandos](#-scripts-y-comandos)
+- [🧪 Testing y Validación](#-testing-y-validación)
+- [📚 Documentación](#-documentación)
+- [🚨 Troubleshooting](#-troubleshooting)
 
 ## 🚀 Inicio Rápido
 
 ### Prerrequisitos
-- [Python 3.11+](https://www.python.org/)
-- [Node.js 20+](https://nodejs.org/)
-- [PostgreSQL 15+](https://www.postgresql.org/) (recomendado) o SQLite para desarrollo
+- **Python 3.11+** - [Descargar aquí](https://www.python.org/)
+- **Node.js 20+** - [Descargar aquí](https://nodejs.org/)
+- **PostgreSQL 15+** (producción) o SQLite (desarrollo)
 
-### 1. Backend Setup
+### ⚡ Setup Rápido (Desarrollo Local)
 
 ```bash
+# 1. Backend - Configurar y ejecutar
 cd backend
-
-# Crear entorno virtual
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # venv\Scripts\activate   # Windows
 
-# Instalar dependencias
 pip install -r requirements.txt
-
-# Configurar variables de entorno (para desarrollo local)
-cp .env.example .env.local
-# Editar .env.local con configuraciones locales
-
-# Configurar base de datos y crear usuario admin
 python create_admin.py
-
-# Iniciar servidor
 python -m uvicorn app.main:app --reload
-```
 
-#### 👤 Usuario Admin de Prueba
-
-Para desarrollo local, ya existe un usuario administrador:
-
-- **Email**: `admin@saas.test`
-- **Contraseña**: `Admin1234!`
-- **Rol**: Administrador con permisos completos
-
-> ⚠️ **Importante**: Este usuario es solo para desarrollo local. En producción debe configurarse un admin diferente.
-
-### 2. Frontend Setup
-
-```bash
+# 2. Frontend - En otra terminal
 cd frontend
-
-# Instalar dependencias
 npm install
-
-# Configurar variables
-cp .env.example .env
-# Configurar VITE_API_URL=http://localhost:8000
-
-# Iniciar desarrollo
 npm run dev
+
+# 3. Validar funcionamiento
+cd backend
+python full_test.py
 ```
 
-### 3. URLs de Acceso
+### 👤 Credenciales de Desarrollo
 
-| Servicio | URL | Descripción |
-|----------|-----|-------------|
-| **Frontend** | http://localhost:3000 | Aplicación React |
-| **Backend API** | http://localhost:8000 | API FastAPI |
-| **API Docs** | http://localhost:8000/docs | Documentación Swagger |
+**Usuario Administrador:**
+- **Email**: `admin@saas.test`
+- **Password**: `Admin1234!`
+- **Rol**: admin (permisos completos)
 
-## ⚙️ Variables de Entorno
+**URLs de Acceso:**
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
 
-### Backend (.env)
-```env
-# Base de datos
-DATABASE_URL=postgresql://user:password@localhost:5432/saas_cafeterias
-# o para SQLite: DATABASE_URL=sqlite:///./saas_cafeterias.db
-
-# Seguridad
-SECRET_KEY=your-super-secret-key-64-characters-minimum
-JWT_SECRET_KEY=your-jwt-secret-key
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# Redis (opcional)
-REDIS_URL=redis://localhost:6379/0
-
-# APIs externas (opcional)
-MERCADOPAGO_ACCESS_TOKEN=your-mercadopago-token
-OPENAI_API_KEY=your-openai-api-key
-
-# Entorno
-ENVIRONMENT=development
-DEBUG=true
-```
-
-### Frontend (.env)
-```env
-VITE_API_URL=http://localhost:8000
-```
-
-## 🛠️ Comandos Útiles
-
-### Backend
-```bash
-# Tests
-pytest
-
-# Linting
-ruff check . --fix
-
-# Nueva migración
-alembic revision --autogenerate -m "descripción"
-
-# Aplicar migraciones
-alembic upgrade head
-```
-
-### Frontend
-```bash
-# Tests
-npm test
-
-# Build
-npm run build
-
-# Linting
-npm run lint
-```
-
-## 📚 Documentación
-
-- **[Roadmap.md](Roadmap.md)** - Planificación y evolución del proyecto
-- **[SEGUIMIENTO.md](SEGUIMIENTO.md)** - Dashboard ejecutivo y métricas
-- **[Changelog.md](Changelog.md)** - Registro detallado de cambios
-- **API Docs** - Documentación interactiva en `/docs`
-- **Monitoring** - Dashboards en Grafana (puerto 3001)
+> ⚠️ **Importante**: Estas credenciales son solo para desarrollo local.
 
 ## 🏗️ Arquitectura del Sistema
 
-### Stack Tecnológico
+### Stack Tecnológico Actual
 ```
 ┌─────────────────┬─────────────────┬─────────────────┐
 │    Frontend     │     Backend     │  Infraestructura │
 ├─────────────────┼─────────────────┼─────────────────┤
 │ React 18        │ FastAPI         │ Docker Compose  │
-│ TypeScript      │ Python 3.11+    │ PostgreSQL 15   │
-│ Zustand         │ SQLAlchemy      │ Redis 7         │
+│ TypeScript      │ Python 3.11+    │ PostgreSQL/SQLite│
+│ Zustand         │ SQLAlchemy      │ Redis (opcional) │
 │ Tailwind CSS    │ Alembic         │ Nginx           │
 │ Vite            │ Pydantic        │ Prometheus      │
 └─────────────────┴─────────────────┴─────────────────┘
 ```
 
-### Servicios y Componentes
+### Estado Actual del Proyecto
+- **✅ Backend API**: 50+ endpoints implementados y documentados
+- **✅ Base de Datos**: 8 modelos relacionales con migraciones
+- **✅ Autenticación**: JWT con roles y permisos granulares
+- **✅ Frontend**: React SPA con 8 páginas funcionales  
+- **✅ Testing**: Suite completa con full_test.py
+- **✅ Infraestructura**: Docker, monitoring, deployment scripts
+- **🔄 En desarrollo**: Integración completa de todas las funcionalidades
 
-#### Backend Services
-- **AuthService**: Autenticación JWT y gestión de usuarios
-- **PaymentService**: Integración MercadoPago con webhooks
-- **AIService**: Asistentes OpenAI especializados
-- **CacheService**: Cache Redis con fallback a memoria
-- **AuditService**: Logs de auditoría para compliance
-- **SecretsService**: Gestión segura de secretos
+### Servicios Implementados
+- **AuthService**: JWT + roles + permisos
+- **PaymentService**: MercadoPago + webhooks
+- **AIService**: OpenAI + 4 tipos de asistentes
+- **CacheService**: Redis con fallback a memoria
+- **AuditService**: Logs para compliance
+- **SecretsService**: Gestión segura de variables
 
-#### Integraciones Externas
-- **MercadoPago**: Procesamiento de pagos seguro
-- **OpenAI**: 4 tipos de asistentes de IA
-- **Celery**: 12 background tasks asíncronos
-- **Redis**: Cache distribuido y sesiones
+## 🛠️ Scripts y Comandos
 
-### Diagrama de Arquitectura
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   React     │────│   Nginx     │────│   FastAPI   │
-│  Frontend   │    │Load Balancer│    │   Backend   │
-└─────────────┘    └─────────────┘    └─────────────┘
-                                               │
-                   ┌─────────────┐    ┌─────────────┐
-                   │ PostgreSQL  │────│    Redis    │
-                   │  Database   │    │    Cache    │
-                   └─────────────┘    └─────────────┘
-                                               │
-                   ┌─────────────┐    ┌─────────────┐
-                   │   Celery    │────│   External  │
-                   │  Workers    │    │ APIs (MP/AI)│
-                   └─────────────┘    └─────────────┘
-```
+### 🧪 Testing y Validación
 
-## 📝 Ejemplos de API
-
-### Autenticación
+**Script Principal de Testing:**
 ```bash
-# Registro de usuario
-curl -X POST "http://localhost:8000/api/v1/auth/register" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "usuario@ejemplo.com",
-    "username": "usuario",
-    "password": "mipassword123",
-    "role": "owner"
-  }'
-
-# Login
-curl -X POST "http://localhost:8000/api/v1/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=usuario&password=mipassword123"
-
-# Respuesta
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "token_type": "bearer",
-  "expires_in": 1800
-}
+cd backend
+python full_test.py
 ```
 
-### Gestión de Negocios
+Este script ejecuta una suite completa que valida:
+- ✅ Configuración de entorno y dependencias
+- ✅ Seguridad (hashing, CORS, configuración)
+- ✅ Base de datos (conexión, integridad, migraciones)
+- ✅ Autenticación (login, JWT, registro)
+- ✅ Autorización (permisos por rol)
+- ✅ Lógica de negocio (CRUD businesses/products)
+- ✅ API endpoints (documentación, respuestas)
+- ✅ Rendimiento (tiempos de respuesta)
+- ✅ Frontend (accesibilidad, conectividad)
+
+### ⚙️ Variables de Entorno Esenciales
+
+**Backend (.env):**
+```env
+# Base de datos (SQLite para desarrollo)
+DATABASE_URL=sqlite:///./saas_cafeterias_local.db
+
+# Seguridad (generar claves únicas en producción)
+SECRET_KEY=development-secret-key-64-chars-minimum-change-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Entorno
+ENVIRONMENT=development
+DEBUG=true
+
+# Opcionales para funcionalidades completas
+REDIS_URL=redis://localhost:6379/0
+MERCADOPAGO_ACCESS_TOKEN=your-token-here
+OPENAI_API_KEY=your-key-here
+```
+
+**Frontend (.env):**
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+### 🔧 Comandos de Desarrollo
+
+**Backend:**
 ```bash
-# Crear negocio
-curl -X POST "http://localhost:8000/api/v1/businesses" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Café Central",
-    "description": "Cafetería en el centro de la ciudad",
-    "address": "Av. Principal 123",
-    "phone": "+54911234567",
-    "email": "info@cafecentral.com",
-    "business_type": "cafe"
-  }'
+# Ejecutar tests completos
+python full_test.py
 
-# Listar negocios
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  "http://localhost:8000/api/v1/businesses"
+# Crear/resetear admin
+python create_admin.py
+
+# Linting y formateo
+ruff check . --fix
+
+# Migraciones DB
+alembic revision --autogenerate -m "descripcion"
+alembic upgrade head
 ```
 
-### Productos y Órdenes
+**Frontend:**
 ```bash
-# Crear producto
-curl -X POST "http://localhost:8000/api/v1/products" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Café Americano",
-    "description": "Café negro tradicional",
-    "price": 250.00,
-    "business_id": "uuid-del-negocio",
-    "category": "bebidas"
-  }'
+# Desarrollo
+npm run dev
 
-# Crear orden
-curl -X POST "http://localhost:8000/api/v1/orders" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "business_id": "uuid-del-negocio",
-    "items": [
-      {
-        "product_id": "uuid-del-producto",
-        "quantity": 2,
-        "unit_price": 250.00
-      }
-    ]
-  }'
+# Build producción
+npm run build
+
+# Tests y linting
+npm test
+npm run lint
 ```
 
-### Pagos con MercadoPago
-```bash
-# Crear preferencia de pago
-curl -X POST "http://localhost:8000/api/v1/payments/preference" \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "order_id": "uuid-de-la-orden",
-    "title": "Pedido Café Central",
-    "description": "2x Café Americano",
-    "amount": 500.00
-  }'
+## 📚 Documentación
 
-# Respuesta
-{
-  "preference_id": "123456789-abcd-efgh-ijkl-mnopqrstuvwx",
-  "init_point": "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=...",
-  "sandbox_init_point": "https://sandbox.mercadopago.com.ar/checkout/v1/redirect?pref_id=..."
-}
-```
-
-## 🔧 Scripts Útiles
-
-### Validación de Integraciones
-```bash
-# Validar todas las integraciones
-python scripts/validate-integrations.py
-
-# Resultado esperado:
-# ✅ Environment Variables: OK
-# ✅ Payment Service: Configured  
-# ✅ AI Service: Initialized
-# ✅ Cache Service: Working
-# ✅ Docker Services: 8 services running
-# ✅ API Health: OK
-```
-
-### Deployment Scripts
-```bash
-# Setup completo de producción
-./scripts/deploy.sh production
-
-# Configurar SSL automático
-./scripts/ssl-setup.sh
-
-# Backup de base de datos
-./scripts/backup.sh
-
-# Configurar gestión de secretos
-./scripts/secrets-setup.sh
-```
+- **[Roadmap.md](Roadmap.md)** - Planificación del proyecto y próximos pasos
+- **[SEGUIMIENTO.md](SEGUIMIENTO.md)** - Estado actual y métricas del proyecto
+- **[CHANGELOG_IMPROVEMENTS.md](CHANGELOG_IMPROVEMENTS.md)** - Registro de mejoras
+- **API Docs** - Documentación interactiva: http://localhost:8000/docs
+- **Monitoring** - Dashboards en Grafana (configurado pero requiere Redis)
 
 ## 🚨 Troubleshooting
 
-### Problemas Comunes
+### Problemas Comunes y Soluciones
 
-#### 1. Error de Conexión a Base de Datos
+**1. Tests fallan con errores de conexión:**
 ```bash
-# Verificar conexión PostgreSQL
-psql $DATABASE_URL -c "SELECT version();"
+# Verificar que el backend está corriendo
+python -m uvicorn app.main:app --reload
 
-# Si falla, verificar variables de entorno
-echo $DATABASE_URL
-
-# Reiniciar servicios Docker
-docker-compose down && docker-compose up -d
+# Si no funciona, verificar dependencias
+pip install -r requirements.txt
 ```
 
-#### 2. Tests Fallan
+**2. Error "No se puede conectar al backend":**
 ```bash
-# Ejecutar tests en modo verbose
-pytest -v --tb=short
-
-# Limpiar cache de pytest
-pytest --cache-clear
-
-# Verificar base de datos de test
-echo $TEST_DATABASE_URL
+# Verificar puerto y URL
+echo "Backend debería estar en http://localhost:8000"
+curl http://localhost:8000/health
 ```
 
-#### 3. Frontend No Se Conecta al Backend
+**3. Problemas de importación o dependencias:**
+```bash
+# Reinstalar entorno virtual
+rm -rf venv
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+pip install -r requirements.txt
+```
+
+**4. Frontend no se conecta con backend:**
 ```bash
 # Verificar variables de entorno del frontend
 cat frontend/.env
-
-# Debe contener:
-# VITE_API_URL=http://localhost:8000
-
-# Verificar CORS en el backend
-# En backend/app/main.py, verificar allow_origins
+# Debe contener: VITE_API_URL=http://localhost:8000
 ```
 
-#### 4. Celery Workers No Funcionan
+**5. Error de JWT o autenticación:**
 ```bash
-# Verificar Redis
-redis-cli ping
+# Recrear usuario admin
+python create_admin.py
 
-# Iniciar worker manualmente
-cd backend && celery -A app.services_directory.celery_app worker --loglevel=info
-
-# Verificar tareas pendientes
-celery -A app.services_directory.celery_app inspect active
+# Verificar en http://localhost:8000/docs
+# Login con admin@saas.test / Admin1234!
 ```
 
-#### 5. Problemas con MercadoPago
+### Comandos de Diagnóstico
+
 ```bash
-# Verificar token de acceso
-echo $MERCADOPAGO_ACCESS_TOKEN
+# Health check completo
+python full_test.py
 
-# Test de conectividad
-curl -H "Authorization: Bearer $MERCADOPAGO_ACCESS_TOKEN" \
-  "https://api.mercadopago.com/users/me"
+# Verificar estado de servicios
+python -c "from app.core.config import settings; print(f'DB: {settings.db_url}')"
 
-# Verificar webhook URL en el dashboard de MercadoPago
-```
-
-### Logs y Monitoreo
-
-#### Acceder a Logs
-```bash
-# Logs del backend
-docker-compose logs -f backend
-
-# Logs de la base de datos
-docker-compose logs -f postgres
-
-# Logs de Redis
-docker-compose logs -f redis
-
-# Logs de Celery
-docker-compose logs -f celery
-```
-
-#### Dashboard de Monitoreo
-- **Grafana**: http://localhost:3001 (admin/admin)
-- **Prometheus**: http://localhost:9090
-- **API Docs**: http://localhost:8000/docs
-
-### Health Checks
-```bash
-# Verificar salud de la API
+# Test de conectividad rápido
 curl http://localhost:8000/health
-
-# Verificar métricas
-curl http://localhost:8000/metrics
-
-# Verificar status de servicios
-docker-compose ps
+curl http://localhost:5173/
 ```
 
-## 🛡️ Seguridad
-
-### Variables de Entorno Sensibles
-```bash
-# NUNCA commitear archivos .env reales
-# Usar siempre .env.example como template
-
-# Generar SECRET_KEY segura
-python -c "import secrets; print(secrets.token_urlsafe(64))"
-
-# Validar configuración de seguridad
-python scripts/validate-integrations.py
-```
-
-### Buenas Prácticas
-- ✅ Usar HTTPS en producción
-- ✅ Rotar tokens de acceso regularmente
-- ✅ Mantener dependencias actualizadas
-- ✅ Revisar logs de auditoría
-- ✅ Backup regular de la base de datos
+---
 
 ## 🤝 Contribución
 
+### Workflow de Desarrollo
 1. Fork del repositorio
-2. Crear branch para feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit cambios (`git commit -m 'feat: nueva funcionalidad'`)
-4. Push y crear Pull Request
+2. Crear branch para feature: `git checkout -b feature/nueva-funcionalidad`
+3. Ejecutar tests antes de commit: `python full_test.py`
+4. Commit con mensaje descriptivo: `git commit -m 'feat: nueva funcionalidad'`
+5. Push y crear Pull Request
 
-Ver [Roadmap.md](Roadmap.md) para ver qué funcionalidades están planificadas.
+### Enlaces Útiles
+- **🗺️ [Roadmap.md](Roadmap.md)** - Planificación y próximos pasos
+- **📊 [SEGUIMIENTO.md](SEGUIMIENTO.md)** - Estado actual del proyecto
+- **📋 [CHANGELOG_IMPROVEMENTS.md](CHANGELOG_IMPROVEMENTS.md)** - Historial de mejoras
 
-## 📊 Observabilidad
+---
 
-### Métricas Disponibles
-- **Performance**: Tiempo de respuesta de endpoints
-- **Errores**: Rate de errores 4xx/5xx
-- **Recursos**: Uso de CPU, memoria, disco
-- **Base de datos**: Conexiones activas, queries lentas
-- **Cache**: Hit/miss ratio de Redis
-- **Negocio**: Órdenes por minuto, ingresos, usuarios activos
+**📞 Support**: Para problemas técnicos, primero ejecutar `python full_test.py` y revisar la sección Troubleshooting.
 
-### Alertas Configuradas
-- 🚨 API response time > 1s
-- 🚨 Error rate > 5%
-- 🚨 Database connections > 80%
-- 🚨 Disk space < 20%
-- 🚨 Memory usage > 90%
+**🎯 Estado**: Sistema en desarrollo activo con arquitectura sólida y testing automatizado.
