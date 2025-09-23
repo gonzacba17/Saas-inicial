@@ -36,7 +36,11 @@ def get_user_by_id(
 ):
     """Get user by ID (own profile or admin)."""
     # Users can only access their own profile unless they're admin
-    if current_user.id != user_id and current_user.role != "admin":
+    user_role = current_user.role
+    if hasattr(user_role, 'value'):
+        user_role = user_role.value
+    
+    if current_user.id != user_id and str(user_role).lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to access this user"
@@ -56,7 +60,11 @@ def update_user_endpoint(
 ):
     """Update user by ID (own profile or admin)."""
     # Users can only update their own profile unless they're admin
-    if current_user.id != user_id and current_user.role != "admin":
+    user_role = current_user.role
+    if hasattr(user_role, 'value'):
+        user_role = user_role.value
+    
+    if current_user.id != user_id and str(user_role).lower() != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions to update this user"
@@ -67,7 +75,4 @@ def update_user_endpoint(
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.get("/me", response_model=UserSchema)
-def read_users_me(current_user: UserSchema = Depends(get_current_user)):
-    """Get current user information."""
-    return current_user
+# Note: /me endpoint is handled in auth.py to avoid duplication

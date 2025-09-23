@@ -159,6 +159,29 @@ Este script ejecuta una suite completa que valida:
 - ✅ Rendimiento (tiempos de respuesta)
 - ✅ Frontend (accesibilidad, conectividad)
 
+### 🔒 Testing de Seguridad Avanzado
+
+**Nuevo: Flujo Completo de Seguridad**
+```bash
+# Test completo de seguridad y permisos
+python tests/test_business_flow_security.py
+```
+
+Este test especializado valida:
+- **🔐 Autenticación robusta**: Login admin + /me endpoint sin errores 500
+- **👮 Control de permisos**: Admin vs usuario regular (403 responses)
+- **🏢 Flujo completo de negocio**: Admin login → crear negocio → crear producto → CRUD → validar permisos
+- **⚡ Análisis de rendimiento**: Tiempos de respuesta y endpoints lentos
+- **🛡️ Manejo de errores**: 400/401/403/404 responses apropiadas
+- **🔍 Validación de roles**: Enum support y role checking robusto
+
+**Mejoras de Seguridad Implementadas:**
+- ✅ Endpoint `/me` nunca retorna 500 (siempre 200/401)
+- ✅ Validación robusta de roles con enum support
+- ✅ Control granular de permisos 403 para usuarios no-admin
+- ✅ Error handling consistente en todos los endpoints
+- ✅ Logging de errores sin exposición de información sensible
+
 ### ⚙️ Variables de Entorno Esenciales
 
 **Backend (.env):**

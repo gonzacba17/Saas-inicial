@@ -24,32 +24,83 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_str}/auth/login
 # ========================================
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    """Get current authenticated user from JWT token."""
+    """Get current authenticated user from JWT token with robust error handling."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    token_data = verify_token(token)
-    if token_data is None:
+    try:
+        # Verify and decode JWT token
+        token_data = verify_token(token)
+        if token_data is None or not token_data.username:
+            raise credentials_exception
+        
+        # Get user from database
+        user = get_user_by_username(db, username=token_data.username)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Check if user is active
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Inactive user",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        return user
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log unexpected errors and return 401 (never 500)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error in get_current_user: {str(e)}")
         raise credentials_exception
-    
-    user = get_user_by_username(db, username=token_data.username)
-    if user is None:
-        raise credentials_exception
-    return user
 
 def require_role(allowed_roles: List[str]):
-    """Dependency factory for role-based access control."""
+    """Dependency factory for role-based access control with robust validation."""
     def role_checker(current_user: UserSchema = Depends(get_current_user)):
-        user_role = current_user.role
-        if user_role not in allowed_roles and "admin" not in allowed_roles:
+        try:
+            # Extract user role - handle both string and enum values
+            user_role = current_user.role
+            if hasattr(user_role, 'value'):
+                user_role = user_role.value
+            
+            # Normalize role strings for comparison
+            user_role_str = str(user_role).lower()
+            allowed_roles_str = [str(role).lower() for role in allowed_roles]
+            
+            # Check if user has required role or is admin
+            if user_role_str not in allowed_roles_str and "admin" not in allowed_roles_str:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Access denied. Required roles: {allowed_roles}, user role: {user_role}"
+                )
+            
+            return current_user
+            
+        except HTTPException:
+            # Re-raise HTTP exceptions
+            raise
+        except Exception as e:
+            # Log unexpected errors and deny access
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in role validation: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {allowed_roles}, user role: {user_role}"
+                detail="Access denied due to role validation error"
             )
-        return current_user
+    
     return role_checker
 
 # ========================================
@@ -103,5 +154,46 @@ def refresh_token(current_user: UserSchema = Depends(get_current_user)):
 
 @router.get("/me", response_model=UserSchema)
 def get_current_user_info(current_user: UserSchema = Depends(get_current_user)):
-    """Get current user information."""
-    return current_user
+    """Get current user information with complete profile data.
+    
+    Returns:
+        UserSchema: Complete user profile including user_id, role, email, etc.
+        
+    Raises:
+        401: Invalid, expired token or inactive user
+        500: Never returned - all errors are handled gracefully
+    """
+    try:
+        # Ensure all required fields are present
+        if not hasattr(current_user, 'id') or not current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user data",
+            )
+        
+        if not hasattr(current_user, 'email') or not current_user.email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user email",
+            )
+            
+        if not hasattr(current_user, 'role') or not current_user.role:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user role",
+            )
+        
+        return current_user
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log unexpected errors and return 401 (never 500)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error in /me endpoint: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not retrieve user information",
+        )

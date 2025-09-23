@@ -65,21 +65,44 @@ def create_business(
     current_user: UserSchema = Depends(get_current_user)
 ):
     """Create new business and associate current user as owner."""
-    # Create business
-    db_business = Business(**business.dict())
-    db.add(db_business)
-    db.commit()
-    db.refresh(db_business)
-    
-    # Create user-business association as owner
-    user_business_data = {
-        "user_id": current_user.id,
-        "business_id": db_business.id,
-        "role": UserBusinessRole.OWNER
-    }
-    UserBusinessCRUD.create(db, user_business_data)
-    
-    return db_business
+    try:
+        # Validate business data
+        if not business.name or len(business.name.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business name is required and cannot be empty"
+            )
+        
+        # Create business
+        db_business = Business(**business.dict())
+        db.add(db_business)
+        db.commit()
+        db.refresh(db_business)
+        
+        # Create user-business association as owner
+        user_business_data = {
+            "user_id": current_user.id,
+            "business_id": db_business.id,
+            "role": UserBusinessRole.OWNER
+        }
+        UserBusinessCRUD.create(db, user_business_data)
+        
+        return db_business
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        db.rollback()
+        raise
+    except Exception as e:
+        # Handle unexpected errors
+        db.rollback()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error creating business: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while creating business"
+        )
 
 @router.get("/{business_id}", response_model=BusinessSchema)
 def get_business(
@@ -101,20 +124,53 @@ def update_business(
     current_user: UserSchema = Depends(get_current_user)
 ):
     """Update business (owners and managers only)."""
-    business = db.query(Business).filter(Business.id == business_id).first()
-    if business is None:
-        raise HTTPException(status_code=404, detail="Business not found")
-    
-    # Check permissions
-    require_business_permission(business_id, current_user, db)
-    
-    update_data = business_update.dict(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(business, field, value)
-    
-    db.commit()
-    db.refresh(business)
-    return business
+    try:
+        # Validate UUID format
+        if not business_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid business ID format"
+            )
+        
+        business = db.query(Business).filter(Business.id == business_id).first()
+        if business is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Business not found"
+            )
+        
+        # Check permissions
+        require_business_permission(business_id, current_user, db)
+        
+        # Validate update data
+        update_data = business_update.dict(exclude_unset=True)
+        if "name" in update_data and (not update_data["name"] or len(update_data["name"].strip()) == 0):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business name cannot be empty"
+            )
+        
+        for field, value in update_data.items():
+            setattr(business, field, value)
+        
+        db.commit()
+        db.refresh(business)
+        return business
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        db.rollback()
+        raise
+    except Exception as e:
+        # Handle unexpected errors
+        db.rollback()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error updating business {business_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while updating business"
+        )
 
 @router.delete("/{business_id}")
 def delete_business(
