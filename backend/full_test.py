@@ -589,7 +589,8 @@ class FullTestSuite:
             checks.append(f"Products: {product_count}")
             
             # Verificar que hay al menos un admin
-            admin_count = db.query(User).filter(User.role == "admin").count()
+            from app.db.db import UserRole
+            admin_count = db.query(User).filter(User.role == UserRole.ADMIN).count()
             if admin_count == 0:
                 raise Exception("No hay usuarios admin en la BD")
             

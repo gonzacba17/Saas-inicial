@@ -76,11 +76,13 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
 
 def create_user(db: Session, user: UserCreate) -> User:
     """Create a new user."""
+    from app.db.db import UserRole
     hashed_password = get_password_hash(user.password)
     user_data = {
         "email": user.email,
         "username": user.username,
         "hashed_password": hashed_password,
+        "role": getattr(user, 'role', UserRole.USER),  # Default to USER role
         "is_active": True,
         "is_superuser": False
     }

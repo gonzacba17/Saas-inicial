@@ -43,10 +43,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 def require_role(allowed_roles: List[str]):
     """Dependency factory for role-based access control."""
     def role_checker(current_user: UserSchema = Depends(get_current_user)):
-        if current_user.role not in allowed_roles and "admin" not in allowed_roles:
+        user_role = current_user.role
+        if user_role not in allowed_roles and "admin" not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {allowed_roles}"
+                detail=f"Access denied. Required roles: {allowed_roles}, user role: {user_role}"
             )
         return current_user
     return role_checker
@@ -62,12 +63,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Set default role if not provided
-    user_data = user.dict()
-    if 'role' not in user_data or not user_data['role']:
-        user_data['role'] = 'user'
-    
-    return create_user(db=db, user=UserCreate(**user_data))
+    return create_user(db=db, user=user)
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):

@@ -1,0 +1,78 @@
+🧪 CAFETERIA IA - REPORTE DE TESTING COMPLETO
+================================================================================
+📊 RESUMEN EJECUTIVO
+   Fecha: 2025-09-23 15:44:39
+   Tiempo total: 4.72s
+   Tests ejecutados: 20
+   Tests exitosos: 8
+   Tests fallidos: 12
+   Tasa de éxito: 40.0%
+
+🔧 Entorno
+   Éxito: 2/2 (100.0%)
+   ✅ Configuración del entorno (0.00s)
+   ✅ Importaciones y dependencias (3.04s)
+
+🔒 Seguridad
+   Éxito: 2/3 (66.7%)
+   ✅ Configuración de seguridad (0.00s)
+   ✅ Sistema de hash de contraseñas (1.02s)
+   ❌ Configuración CORS (0.11s)
+      Error: All connection attempts failed
+
+💾 Base de Datos
+   Éxito: 3/3 (100.0%)
+   ✅ Conexión a base de datos (0.14s)
+   ✅ Usuario admin existe (0.01s)
+   ✅ Integridad de datos (0.04s)
+
+🔐 Autenticación
+   Éxito: 0/4 (0.0%)
+   ❌ Login de admin (0.05s)
+      Error: All connection attempts failed
+   ❌ Validación JWT (0.00s)
+      Error: Token admin no disponible
+   ❌ Registro de usuario (0.05s)
+      Error: All connection attempts failed
+   ❌ Rechazo credenciales inválidas (0.06s)
+      Error: All connection attempts failed
+
+👮 Autorización
+   Éxito: 0/2 (0.0%)
+   ❌ Bloqueo acceso no autorizado (0.04s)
+      Error: All connection attempts failed
+   ❌ Permisos basados en roles (0.00s)
+      Error: Token de usuario de prueba no disponible
+
+🏢 Lógica de Negocio
+   Éxito: 0/2 (0.0%)
+   ❌ CRUD de negocios (0.00s)
+      Error: Token admin no disponible
+   ❌ CRUD de productos (0.00s)
+      Error: Token admin o business_id no disponible
+
+🌐 API Endpoints
+   Éxito: 0/2 (0.0%)
+   ❌ Servidor backend corriendo (0.06s)
+      Error: No se puede conectar al backend. ¿Está corriendo?
+   ❌ Documentación API accesible (0.06s)
+      Error: All connection attempts failed
+
+⚡ Rendimiento
+   Éxito: 0/1 (0.0%)
+   ❌ Tiempos de respuesta API (0.00s)
+      Error: Token admin no disponible
+
+🖥️ Frontend
+   Éxito: 1/1 (100.0%)
+   ✅ Accesibilidad del frontend (0.05s)
+
+📋 RECOMENDACIONES
+   ⚠️  12 tests fallaron. Revisar errores arriba.
+   🔧 Corregir problemas antes de continuar.
+
+💡 PRÓXIMOS PASOS
+   1. Si hay fallos, revisar logs detallados arriba
+   2. Verificar que backend y frontend estén corriendo
+   3. Ejecutar tests individuales si es necesario
+   4. Repetir testing después de correcciones

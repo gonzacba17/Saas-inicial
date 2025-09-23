@@ -48,6 +48,7 @@ class UserBase(BaseModel, StrictValidationMixin):
 
 class UserCreate(UserBase):
     password: str
+    role: Optional[str] = None
     
     @field_validator('password')
     @classmethod
@@ -70,6 +71,7 @@ class UserInDBBase(UserBase):
 
     class Config:
         from_attributes = True
+        use_enum_values = True
 
 class User(UserInDBBase):
     pass
