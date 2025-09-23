@@ -54,6 +54,13 @@ echo ""
 
 log "Verificando entorno..."
 
+# Get the directory where the script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$( dirname "$SCRIPT_DIR" )"
+
+# Change to project root
+cd "$PROJECT_ROOT"
+
 # Check if we're in the right directory
 if [ ! -d "backend" ] || [ ! -d "frontend" ]; then
     error "Este script debe ejecutarse desde el directorio raíz del proyecto"
@@ -84,17 +91,23 @@ if [ ! -d "venv" ]; then
 fi
 
 # Activate virtual environment
-source venv/bin/activate 2>/dev/null || {
-    # For different shell environments
-    . venv/bin/activate 2>/dev/null || {
-        error "No se pudo activar el entorno virtual"
-        exit 1
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate 2>/dev/null || {
+        warning "No se pudo activar el entorno virtual, continuando sin activar"
     }
-}
+else
+    warning "Entorno virtual no encontrado en backend/venv/"
+fi
 
 # Install/update dependencies
 log "Instalando dependencias..."
-pip install -q -r requirements.txt
+if command -v pip3 &> /dev/null; then
+    pip3 install -q -r requirements.txt
+elif command -v pip &> /dev/null; then
+    pip install -q -r requirements.txt
+else
+    warning "pip no encontrado, saltando instalación de dependencias"
+fi
 
 success "Backend configurado"
 
@@ -118,7 +131,7 @@ success "Base de datos y admin configurados"
 log "Ejecutando suite completa de tests..."
 
 # Run the comprehensive test suite
-if python3 full_test.py; then
+if python3 tests/full_test.py; then
     success "Tests ejecutados exitosamente"
     test_result="PASS"
 else
@@ -130,7 +143,7 @@ fi
 # 5. VERIFICAR FRONTEND (OPCIONAL)
 # ===============================================
 
-cd ../frontend
+cd frontend
 
 if [ -f "package.json" ]; then
     log "Verificando configuración del frontend..."
@@ -210,7 +223,7 @@ echo "2. Si frontend no está corriendo:"
 echo "   cd frontend && npm run dev"
 echo ""
 echo "3. Validar funcionamiento completo:"
-echo "   cd backend && python full_test.py"
+echo "   python tests/full_test.py"
 echo ""
 echo "4. Acceder a la aplicación:"
 echo "   - Frontend: http://localhost:5173"

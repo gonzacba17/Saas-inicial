@@ -4,6 +4,7 @@ Sistema SaaS completo para gestión de cafeterías con autenticación JWT, pagos
 
 ## 📋 Índice de Contenido
 
+- [📂 Estructura del Proyecto](#-estructura-del-proyecto)
 - [🚀 Inicio Rápido](#-inicio-rápido)
 - [👤 Credenciales de Desarrollo](#-credenciales-de-desarrollo)
 - [🏗️ Arquitectura del Sistema](#-arquitectura-del-sistema)
@@ -11,6 +12,42 @@ Sistema SaaS completo para gestión de cafeterías con autenticación JWT, pagos
 - [🧪 Testing y Validación](#-testing-y-validación)
 - [📚 Documentación](#-documentación)
 - [🚨 Troubleshooting](#-troubleshooting)
+
+## 📂 Estructura del Proyecto
+
+```
+Saas-inicial/
+├── 📁 backend/                 # API FastAPI y lógica de negocio
+│   ├── app/                    # Código principal de la aplicación
+│   │   ├── api/v1/            # Endpoints REST organizados
+│   │   ├── core/              # Configuración y utilidades
+│   │   ├── db/                # Modelos y CRUD de base de datos
+│   │   ├── middleware/        # Middleware de seguridad y validación
+│   │   └── services_directory/ # Servicios especializados
+│   ├── alembic/               # Migraciones de base de datos
+│   └── requirements.txt       # Dependencias Python
+├── 📁 frontend/               # Aplicación React TypeScript
+│   ├── src/
+│   │   ├── components/        # Componentes reutilizables
+│   │   ├── pages/             # Páginas de la aplicación
+│   │   ├── store/             # Estado global (Zustand)
+│   │   └── types/             # Tipos TypeScript
+│   └── package.json           # Dependencias Node.js
+├── 📁 tests/                  # Suite completa de testing
+│   ├── full_test.py           # Tests de integración principal
+│   └── test_*.py              # Tests unitarios por módulo
+├── 📁 scripts/                # Scripts de automatización
+│   ├── update_and_test.sh     # Script principal (Linux/Mac)
+│   ├── update_and_test.ps1    # Script principal (Windows)
+│   └── deploy.sh              # Scripts de despliegue
+├── 📁 docs/                   # Documentación del proyecto
+│   ├── SEGUIMIENTO.md         # Estado actual y métricas
+│   ├── Roadmap.md             # Planificación y roadmap
+│   └── DEPLOYMENT.md          # Guías de despliegue
+└── 📁 monitoring/             # Observabilidad y monitoreo
+    ├── prometheus/            # Métricas de aplicación
+    └── grafana/               # Dashboards visuales
+```
 
 ## 🚀 Inicio Rápido
 
@@ -21,6 +58,16 @@ Sistema SaaS completo para gestión de cafeterías con autenticación JWT, pagos
 
 ### ⚡ Setup Rápido (Desarrollo Local)
 
+**Opción 1: Setup Automatizado (Recomendado)**
+```bash
+# Linux/Mac
+./scripts/update_and_test.sh
+
+# Windows
+.\scripts\update_and_test.ps1
+```
+
+**Opción 2: Setup Manual**
 ```bash
 # 1. Backend - Configurar y ejecutar
 cd backend
@@ -38,8 +85,7 @@ npm install
 npm run dev
 
 # 3. Validar funcionamiento
-cd backend
-python full_test.py
+python tests/full_test.py
 ```
 
 ### 👤 Credenciales de Desarrollo
@@ -94,8 +140,12 @@ python full_test.py
 
 **Script Principal de Testing:**
 ```bash
-cd backend
-python full_test.py
+# Desde la raíz del proyecto
+python tests/full_test.py
+
+# O usando el script automatizado
+./scripts/update_and_test.sh  # Linux/Mac
+.\scripts\update_and_test.ps1  # Windows
 ```
 
 Este script ejecuta una suite completa que valida:
@@ -137,20 +187,30 @@ VITE_API_URL=http://localhost:8000
 
 ### 🔧 Comandos de Desarrollo
 
+**Scripts Principales:**
+```bash
+# Setup completo + tests (recomendado)
+./scripts/update_and_test.sh        # Linux/Mac
+.\scripts\update_and_test.ps1       # Windows
+
+# Solo testing
+python tests/full_test.py
+
+# Deployment
+./scripts/deploy.sh production
+```
+
 **Backend:**
 ```bash
-# Ejecutar tests completos
-python full_test.py
-
 # Crear/resetear admin
-python create_admin.py
+cd backend && python create_admin.py
 
 # Linting y formateo
-ruff check . --fix
+cd backend && ruff check . --fix
 
 # Migraciones DB
-alembic revision --autogenerate -m "descripcion"
-alembic upgrade head
+cd backend && alembic revision --autogenerate -m "descripcion"
+cd backend && alembic upgrade head
 ```
 
 **Frontend:**
@@ -168,10 +228,16 @@ npm run lint
 
 ## 📚 Documentación
 
-- **[Roadmap.md](Roadmap.md)** - Planificación del proyecto y próximos pasos
-- **[SEGUIMIENTO.md](SEGUIMIENTO.md)** - Estado actual y métricas del proyecto
-- **[CHANGELOG_IMPROVEMENTS.md](CHANGELOG_IMPROVEMENTS.md)** - Registro de mejoras
+### 📖 Documentación Principal
+- **[docs/Roadmap.md](docs/Roadmap.md)** - Planificación del proyecto y próximos pasos
+- **[docs/SEGUIMIENTO.md](docs/SEGUIMIENTO.md)** - Estado actual y métricas del proyecto
+- **[docs/CHANGELOG_IMPROVEMENTS.md](docs/CHANGELOG_IMPROVEMENTS.md)** - Registro de mejoras
+- **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Guías de despliegue en producción
+
+### 🔗 Enlaces Útiles
 - **API Docs** - Documentación interactiva: http://localhost:8000/docs
+- **Scripts** - Ver [scripts/](scripts/) para automatización
+- **Tests** - Ver [tests/](tests/) para testing
 - **Monitoring** - Dashboards en Grafana (configurado pero requiere Redis)
 
 ## 🚨 Troubleshooting
@@ -213,7 +279,7 @@ cat frontend/.env
 **5. Error de JWT o autenticación:**
 ```bash
 # Recrear usuario admin
-python create_admin.py
+cd backend && python create_admin.py
 
 # Verificar en http://localhost:8000/docs
 # Login con admin@saas.test / Admin1234!
@@ -223,7 +289,10 @@ python create_admin.py
 
 ```bash
 # Health check completo
-python full_test.py
+python tests/full_test.py
+
+# O usar script automatizado
+./scripts/update_and_test.sh
 
 # Verificar estado de servicios
 python -c "from app.core.config import settings; print(f'DB: {settings.db_url}')"

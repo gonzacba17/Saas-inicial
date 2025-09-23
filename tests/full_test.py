@@ -28,7 +28,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Agregar el directorio backend al PYTHONPATH
-backend_dir = Path(__file__).parent
+project_root = Path(__file__).parent.parent
+backend_dir = project_root / "backend"
 sys.path.insert(0, str(backend_dir))
 
 @dataclass
@@ -115,8 +116,14 @@ class FullTestSuite:
         checks.append(f"Directorio: {current_dir}")
         
         # Verificar estructura de directorios críticos
-        critical_dirs = ["app", "alembic", "tests"]
-        for dir_name in critical_dirs:
+        critical_dirs = {
+            "backend/app": "Backend application directory",
+            "backend/alembic": "Database migrations",
+            "tests": "Test suite directory",
+            "frontend": "Frontend application",
+            "scripts": "Automation scripts"
+        }
+        for dir_name, description in critical_dirs.items():
             if os.path.exists(dir_name):
                 checks.append(f"✅ {dir_name}/ existe")
             else:
@@ -757,10 +764,16 @@ async def main():
 
 if __name__ == "__main__":
     # Verificar que estamos en el directorio correcto
-    if not os.path.exists("app"):
-        print("❌ Error: Este script debe ejecutarse desde el directorio 'backend'")
-        print("Ejecute: cd backend && python full_test.py")
+    project_root = Path(__file__).parent.parent
+    backend_app_dir = project_root / "backend" / "app"
+    if not backend_app_dir.exists():
+        print("❌ Error: Este script debe ejecutarse desde el directorio del proyecto")
+        print("Ejecute: cd tests && python full_test.py")
+        print("O desde raíz: python tests/full_test.py")
         sys.exit(1)
+    
+    # Cambiar al directorio del proyecto para ejecución
+    os.chdir(project_root)
     
     # Ejecutar tests
     asyncio.run(main())
