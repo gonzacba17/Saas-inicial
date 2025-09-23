@@ -161,13 +161,19 @@ Este script ejecuta una suite completa que valida:
 
 ### 🔒 Testing de Seguridad Avanzado
 
-**Nuevo: Flujo Completo de Seguridad**
+**Nuevo: Suite Completa de Testing**
 ```bash
 # Test completo de seguridad y permisos
 python tests/test_business_flow_security.py
+
+# Análisis de performance de endpoints críticos
+python tests/test_performance_analysis.py
+
+# Tests End-to-End completos
+python tests/test_e2e_flow.py
 ```
 
-Este test especializado valida:
+**Testing de Seguridad Especializado:**
 - **🔐 Autenticación robusta**: Login admin + /me endpoint sin errores 500
 - **👮 Control de permisos**: Admin vs usuario regular (403 responses)
 - **🏢 Flujo completo de negocio**: Admin login → crear negocio → crear producto → CRUD → validar permisos
@@ -175,12 +181,25 @@ Este test especializado valida:
 - **🛡️ Manejo de errores**: 400/401/403/404 responses apropiadas
 - **🔍 Validación de roles**: Enum support y role checking robusto
 
+**Testing de Performance:**
+- **📊 Métricas detalladas**: Tiempo promedio, mín/máx, percentiles
+- **🎯 Endpoints críticos**: Login, /me, CRUD businesses/products
+- **🚨 Alertas automáticas**: Endpoints lentos (>500ms) identificados
+- **📈 Tendencias**: Tracking de performance en el tiempo
+
+**Testing End-to-End:**
+- **🌐 Frontend + Backend**: Validación completa del stack
+- **🔍 UI Error Handling**: Verificación de manejo de errores en React
+- **👤 Flujos de usuario**: Login, permisos, CRUD completo
+- **🛡️ Seguridad integrada**: Validación de 403/401 en UI
+
 **Mejoras de Seguridad Implementadas:**
 - ✅ Endpoint `/me` nunca retorna 500 (siempre 200/401)
 - ✅ Validación robusta de roles con enum support
 - ✅ Control granular de permisos 403 para usuarios no-admin
 - ✅ Error handling consistente en todos los endpoints
-- ✅ Logging de errores sin exposición de información sensible
+- ✅ Logging centralizado con alertas de seguridad
+- ✅ Frontend con manejo robusto de errores HTTP
 
 ### ⚙️ Variables de Entorno Esenciales
 
@@ -256,6 +275,11 @@ npm run lint
 - **[docs/SEGUIMIENTO.md](docs/SEGUIMIENTO.md)** - Estado actual y métricas del proyecto
 - **[docs/CHANGELOG_IMPROVEMENTS.md](docs/CHANGELOG_IMPROVEMENTS.md)** - Registro de mejoras
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** - Guías de despliegue en producción
+
+### 🆕 Nueva Documentación Técnica
+- **[docs/API_EXAMPLES.md](docs/API_EXAMPLES.md)** - Ejemplos completos de API con payloads y respuestas
+- **[docs/PERFORMANCE_SECURITY_REPORT.md](docs/PERFORMANCE_SECURITY_REPORT.md)** - Análisis detallado de performance y seguridad
+- **[logs/](logs/)** - Logs centralizados (app.log, security.log, performance.log, errors.log)
 
 ### 🔗 Enlaces Útiles
 - **API Docs** - Documentación interactiva: http://localhost:8000/docs

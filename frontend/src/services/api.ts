@@ -28,13 +28,69 @@ class ApiService {
       ...options,
     };
 
-    const response = await fetch(url, config);
+    try {
+      const response = await fetch(url, config);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Handle specific HTTP status codes
+      if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        let errorData: any = null;
+
+        try {
+          errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          // If response is not JSON, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+
+        // Create specific error types for better frontend handling
+        const error = new Error(errorMessage) as any;
+        error.status = response.status;
+        error.statusText = response.statusText;
+        error.data = errorData;
+
+        // Handle specific status codes
+        switch (response.status) {
+          case 401:
+            // Unauthorized - clear token and redirect to login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('role');
+            error.type = 'UNAUTHORIZED';
+            break;
+          case 403:
+            // Forbidden - user doesn't have permission
+            error.type = 'FORBIDDEN';
+            break;
+          case 404:
+            // Not Found
+            error.type = 'NOT_FOUND';
+            break;
+          case 422:
+            // Validation Error
+            error.type = 'VALIDATION_ERROR';
+            break;
+          case 500:
+            // Internal Server Error
+            error.type = 'SERVER_ERROR';
+            break;
+          default:
+            error.type = 'UNKNOWN_ERROR';
+        }
+
+        throw error;
+      }
+
+      return response.json();
+    } catch (error: any) {
+      // Network error or other fetch failures
+      if (!error.status) {
+        error.type = 'NETWORK_ERROR';
+        error.message = 'Network error - please check your connection';
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
@@ -42,16 +98,53 @@ class ApiService {
     formData.append('username', credentials.username);
     formData.append('password', credentials.password);
 
-    const response = await fetch(`${this.baseURL}/api/v1/auth/login`, {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const response = await fetch(`${this.baseURL}/api/v1/auth/login`, {
+        method: 'POST',
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error('Login failed');
+      if (!response.ok) {
+        let errorMessage = 'Login failed';
+        let errorData: any = null;
+
+        try {
+          errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch {
+          errorMessage = response.statusText || errorMessage;
+        }
+
+        const error = new Error(errorMessage) as any;
+        error.status = response.status;
+        error.statusText = response.statusText;
+        error.data = errorData;
+
+        switch (response.status) {
+          case 401:
+            error.type = 'INVALID_CREDENTIALS';
+            break;
+          case 422:
+            error.type = 'VALIDATION_ERROR';
+            break;
+          case 500:
+            error.type = 'SERVER_ERROR';
+            break;
+          default:
+            error.type = 'LOGIN_ERROR';
+        }
+
+        throw error;
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (!error.status) {
+        error.type = 'NETWORK_ERROR';
+        error.message = 'Network error - please check your connection';
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   async register(userData: RegisterRequest): Promise<User> {

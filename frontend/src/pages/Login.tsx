@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
+import { ErrorDisplay, useErrorHandler } from '../components/ErrorDisplay';
 
 export const Login: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -9,10 +10,11 @@ export const Login: React.FC = () => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<any>(null);
   
   const navigate = useNavigate();
   const login = useAuthStore(state => state.login);
+  const { handleError } = useErrorHandler();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -24,7 +26,7 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError(null);
 
     try {
       const authResponse = await apiService.login(formData);
@@ -32,11 +34,17 @@ export const Login: React.FC = () => {
       
       login(authResponse.access_token, userResponse);
       navigate('/cafes');
-    } catch (err) {
-      setError('Invalid username or password');
+    } catch (err: any) {
+      const processedError = handleError(err);
+      setError(processedError);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setError(null);
+    handleSubmit(new Event('submit') as any);
   };
 
   return (
@@ -85,7 +93,11 @@ export const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
+            <ErrorDisplay 
+              error={error} 
+              onRetry={error?.type === 'NETWORK_ERROR' ? handleRetry : undefined}
+              className="mb-4"
+            />
           )}
 
           <div>
