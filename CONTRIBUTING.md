@@ -1,6 +1,14 @@
 # 🤝 Guía de Contribución - SaaS Cafeterías
+**🆕 ACTUALIZADA POST-AUDITORÍA** | 23/09/2025
 
 ¡Gracias por tu interés en contribuir al proyecto SaaS Cafeterías! Esta guía te ayudará a configurar tu entorno de desarrollo y seguir las mejores prácticas del proyecto.
+
+## 🚨 Estado Actual del Proyecto
+
+**Post-Auditoría Técnica (23/09/2025)**:
+- ✅ **Base técnica excelente**: Arquitectura enterprise, seguridad 95/100, performance 92/100
+- 🔴 **Testing coverage crítico**: 40% actual vs 85% requerido para producción
+- 🎯 **Prioridad #1**: Completar tests unitarios antes de nuevas funcionalidades
 
 ## 📋 Índice
 
@@ -8,8 +16,10 @@
 - [📂 Estructura del Proyecto](#-estructura-del-proyecto)
 - [💻 Estilo de Código](#-estilo-de-código)
 - [🧪 Testing](#-testing)
+- [📊 Quality Gates](#-quality-gates)
 - [📝 Commits y PRs](#-commits-y-prs)
 - [🔧 Scripts de Desarrollo](#-scripts-de-desarrollo)
+- [🎯 Contribuir a Testing Coverage](#-contribuir-a-testing-coverage)
 
 ## 🚀 Setup de Desarrollo
 
@@ -205,11 +215,53 @@ test('renders login form correctly', () => {
 });
 ```
 
-### Criterios de Calidad
-- **Coverage**: Mínimo 70% en nuevas funcionalidades
+### Criterios de Calidad (Actualizados)
+- **Coverage Global**: CRÍTICO - elevar de 40% a 85% antes de nuevas features
+- **Coverage por Módulo**: 
+  - auth.py: 28% → 80% requerido
+  - businesses.py: 25% → 75% requerido 
+  - orders.py: 25% → 75% requerido
+  - payments.py: 25% → 70% requerido
 - **Tests unitarios**: Para lógica de negocio crítica
 - **Tests de integración**: Para flujos completos
 - **Tests E2E**: Para funcionalidades principales
+- **Performance**: Mantener tiempos < 300ms P95
+
+## 📊 Quality Gates
+
+### Pre-commit Checklist
+Antes de hacer commit, verificar:
+
+```bash
+# 1. Tests coverage
+cd backend && python -m pytest --cov=app --cov-fail-under=40
+# Meta: incrementar threshold progresivamente hasta 85%
+
+# 2. Linting
+cd backend && ruff check . --fix
+cd frontend && npm run lint
+
+# 3. Tests functionality
+python tests/full_test.py
+
+# 4. Security validation
+python tests/test_business_flow_security.py
+
+# 5. Performance check
+python tests/test_performance_analysis.py
+```
+
+### Production Readiness Criteria
+
+| Criterio | Estado Actual | Meta | Bloqueante |
+|----------|---------------|------|------------|
+| **Security Score** | ✅ 95/100 | >90/100 | ✅ |
+| **Performance Score** | ✅ 92/100 | >90/100 | ✅ |
+| **Infrastructure** | ✅ 90/100 | >85/100 | ✅ |
+| **Testing Coverage** | 🔴 40/100 | >85/100 | 🚨 CRÍTICO |
+| **Documentation** | ✅ 100/100 | >95/100 | ✅ |
+
+**🚨 IMPORTANTE**: No se aceptarán PRs con nuevas funcionalidades hasta completar testing coverage.
 
 ## 📝 Commits y PRs
 
@@ -339,8 +391,102 @@ curl http://localhost:8000/health
 - **Preguntas técnicas**: Crear issue en GitHub
 - **Propuestas de mejora**: Usar GitHub Discussions
 
+## 🎯 Contribuir a Testing Coverage
+
+### Priority #1: Testing Coverage
+
+**Estado Crítico**: El proyecto requiere elevar testing coverage de 40% a 85% antes de continuar con roadmap.
+
+### Módulos Prioritarios para Testing
+
+1. **auth.py (28% → 80%)**
+   ```bash
+   # Crear tests para:
+   - Flujos de autenticación completos
+   - Validación de tokens JWT
+   - Manejo de errores de login
+   - Roles y permisos
+   
+   # Archivo: backend/tests/test_auth_comprehensive.py
+   ```
+
+2. **businesses.py (25% → 75%)**
+   ```bash
+   # Crear tests para:
+   - CRUD operations completas
+   - Validación de permisos por owner
+   - Edge cases de validación
+   - Integración con users
+   
+   # Archivo: backend/tests/test_businesses_extended.py
+   ```
+
+3. **orders.py (25% → 75%)**
+   ```bash
+   # Crear tests para:
+   - Ciclo completo de pedidos
+   - Estados de orders
+   - Validación de business association
+   - Payment integration
+   
+   # Archivo: backend/tests/test_orders_comprehensive.py
+   ```
+
+4. **payments.py (25% → 70%)**
+   ```bash
+   # Crear tests para:
+   - MercadoPago integration
+   - Webhook handling
+   - Payment status management
+   - Error scenarios
+   
+   # Archivo: backend/tests/test_payments_comprehensive.py
+   ```
+
+### Cómo Contribuir a Testing
+
+1. **Elegir un módulo** de la lista prioritaria
+2. **Crear branch**: `git checkout -b test/module-name-coverage`
+3. **Escribir tests** siguiendo patrones existentes
+4. **Verificar coverage**: `pytest --cov=app.api.v1.module --cov-report=term-missing`
+5. **Target mínimo**: Alcanzar meta del módulo
+6. **Submit PR** con evidencia de coverage mejorado
+
+### Template de Test Comprehensive
+
+```python
+# backend/tests/test_module_comprehensive.py
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+def test_module_happy_path(client: TestClient, db: Session):
+    """Test del flujo principal exitoso."""
+    pass
+
+def test_module_edge_cases(client: TestClient, db: Session):
+    """Test de casos límite y validaciones."""
+    pass
+
+def test_module_error_handling(client: TestClient, db: Session):
+    """Test de manejo de errores y excepciones."""
+    pass
+
+def test_module_permissions(client: TestClient, db: Session):
+    """Test de permisos y roles."""
+    pass
+
+def test_module_integration(client: TestClient, db: Session):
+    """Test de integración con otros módulos."""
+    pass
+```
+
+### Tracking de Progreso
+
+Ver [PLAN_ACCION_COVERAGE.md](PLAN_ACCION_COVERAGE.md) para tracking detallado de progreso hacia 85% coverage.
+
 ---
 
 ¡Gracias por contribuir al proyecto! 🚀
 
-Recuerda seguir estas guías para mantener la calidad y consistencia del código.
+**Prioridad actual**: ¡Tu contribución en testing coverage es CRÍTICA para desbloquear el roadmap del proyecto!
