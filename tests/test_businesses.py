@@ -14,13 +14,13 @@ def get_auth_headers():
     user_data = {
         "email": "businesstest@example.com",
         "username": "businessuser",
-        "password": "testpass123"
+        "password": "TestPass123!"
     }
     client.post("/api/v1/auth/register", json=user_data)
     
     login_response = client.post("/api/v1/auth/login", data={
         "username": "businessuser",
-        "password": "testpass123"
+        "password": "TestPass123!"
     })
     
     if login_response.status_code == 200:
@@ -186,13 +186,13 @@ class TestBusinessesCRUD:
         other_user_data = {
             "email": "other@example.com",
             "username": "otheruser",
-            "password": "testpass123"
+            "password": "TestPass123!"
         }
         client.post("/api/v1/auth/register", json=other_user_data)
         
         other_login_response = client.post("/api/v1/auth/login", data={
             "username": "otheruser",
-            "password": "testpass123"
+            "password": "TestPass123!"
         })
         
         if other_login_response.status_code == 200:

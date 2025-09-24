@@ -15,7 +15,7 @@ from app.db.db import (
     Business, UserBusinessCRUD, UserBusinessRole
 )
 from app.schemas import (
-    Payment as PaymentSchema, PaymentPreference, PaymentWebhookData,
+    Payment as PaymentSchema, PaymentPreference, PaymentPreferenceRequest, PaymentWebhookData,
     User as UserSchema
 )
 from app.api.v1.auth import get_current_user
@@ -40,7 +40,7 @@ def check_payment_permission(
     
     # Business owners/managers can access payments for their business
     if required_roles is None:
-        required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+        required_roles = [UserBusinessRole.owner, UserBusinessRole.manager]
     
     return UserBusinessCRUD.has_permission(db, current_user.id, payment.business_id, required_roles)
 
@@ -65,7 +65,7 @@ def check_business_permission(
 ) -> bool:
     """Check if user has permission to access/modify business."""
     if required_roles is None:
-        required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+        required_roles = [UserBusinessRole.owner, UserBusinessRole.manager]
     
     return UserBusinessCRUD.has_permission(db, current_user.id, business_id, required_roles)
 
@@ -132,7 +132,7 @@ def list_business_payments(
 
 @router.post("/create-preference", response_model=Dict[str, Any])
 def create_payment_preference(
-    payment_request: PaymentPreference,
+    payment_request: PaymentPreferenceRequest,
     db: Session = Depends(get_db), 
     current_user: UserSchema = Depends(get_current_user)
 ):

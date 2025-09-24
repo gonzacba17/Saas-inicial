@@ -20,13 +20,13 @@ depends_on = None
 def upgrade() -> None:
     # Create users table
     op.create_table('users',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+    sa.Column('id', sa.String(36), nullable=False),  # Changed to String for SQLite compatibility
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('username', sa.String(), nullable=False),
     sa.Column('hashed_password', sa.String(), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('is_superuser', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -36,7 +36,7 @@ def upgrade() -> None:
     
     # Create businesses table (equivalent to cafes)
     op.create_table('businesses',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
+    sa.Column('id', sa.String(36), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('address', sa.String(), nullable=True),
@@ -44,7 +44,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=True),
     sa.Column('business_type', sa.String(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -53,15 +53,15 @@ def upgrade() -> None:
     
     # Create products table
     op.create_table('products',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('business_id', postgresql.UUID(as_uuid=True), nullable=False),
+    sa.Column('id', sa.String(36), nullable=False),
+    sa.Column('business_id', sa.String(36), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('price', sa.Float(), nullable=False),
     sa.Column('category', sa.String(), nullable=True),
     sa.Column('image_url', sa.String(), nullable=True),
     sa.Column('is_available', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['business_id'], ['businesses.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -71,13 +71,13 @@ def upgrade() -> None:
     
     # Create orders table
     op.create_table('orders',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('business_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('status', sa.Enum('PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'CANCELLED', name='orderstatus'), nullable=True),
+    sa.Column('id', sa.String(36), nullable=False),
+    sa.Column('user_id', sa.String(36), nullable=False),
+    sa.Column('business_id', sa.String(36), nullable=False),
+    sa.Column('status', sa.String(), nullable=True),  # Changed from Enum for SQLite compatibility
     sa.Column('total_amount', sa.Float(), nullable=False),
     sa.Column('notes', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['business_id'], ['businesses.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -87,9 +87,9 @@ def upgrade() -> None:
     
     # Create order_items table
     op.create_table('order_items',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('order_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('product_id', postgresql.UUID(as_uuid=True), nullable=False),
+    sa.Column('id', sa.String(36), nullable=False),
+    sa.Column('order_id', sa.String(36), nullable=False),
+    sa.Column('product_id', sa.String(36), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False),
     sa.Column('unit_price', sa.Float(), nullable=False),
     sa.Column('total_price', sa.Float(), nullable=False),
@@ -101,12 +101,12 @@ def upgrade() -> None:
     
     # Create user_businesses table (many-to-many relationship)
     op.create_table('user_businesses',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('business_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('role', sa.Enum('OWNER', 'MANAGER', 'EMPLOYEE', name='userbusinessrole'), nullable=True),
+    sa.Column('id', sa.String(36), nullable=False),
+    sa.Column('user_id', sa.String(36), nullable=False),
+    sa.Column('business_id', sa.String(36), nullable=False),
+    sa.Column('role', sa.String(), nullable=True),  # Changed from Enum for SQLite compatibility
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['business_id'], ['businesses.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),

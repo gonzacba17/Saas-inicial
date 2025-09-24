@@ -37,7 +37,20 @@
       "Bash(rg:*)",
       "Bash(./scripts/update_and_test.sh:*)",
       "Bash(dos2unix:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(pip3 install:*)",
+      "Bash(source:*)",
+      "Bash(venv/Scripts/python.exe -m pip install:*)",
+      "Bash(venv/Scripts/python.exe -m pytest ../tests/ --cov=app --cov-report=term-missing --ignore=../tests/test_e2e_flow.py)",
+      "Bash(backend/venv/Scripts/python.exe -m pytest tests/ --cov=backend/app --cov-report=term-missing --ignore=tests/test_e2e_flow.py)",
+      "Bash(PYTHONPATH=backend python3 -m pytest tests/test_auth.py -v)",
+      "Bash(USE_SQLITE=true PYTHONPATH=backend python3 -m pytest tests/test_auth.py -v)",
+      "Bash(USE_SQLITE=true PYTHONPATH=backend alembic -c backend/alembic.ini upgrade head)",
+      "Bash(sqlite3:*)",
+      "Bash(USE_SQLITE=true PYTHONPATH=backend python3 -m alembic -c backend/alembic.ini upgrade head)",
+      "Bash(USE_SQLITE=true PYTHONPATH=. python3 -m alembic upgrade head)",
+      "Bash(USE_SQLITE=true PYTHONPATH=. python3 -m alembic downgrade base)",
+      "Bash(USE_SQLITE=true PYTHONPATH=. python3 create_test_db.py)"
     ],
     "deny": []
   }

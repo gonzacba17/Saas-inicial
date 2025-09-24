@@ -18,21 +18,21 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create PaymentStatus enum
-    op.execute("CREATE TYPE paymentstatus AS ENUM ('pending', 'approved', 'authorized', 'in_process', 'in_mediation', 'rejected', 'cancelled', 'refunded', 'charged_back')")
+    # Create PaymentStatus enum (SQLite uses string constraints instead of enum)
+    # op.execute("CREATE TYPE paymentstatus AS ENUM ('pending', 'approved', 'authorized', 'in_process', 'in_mediation', 'rejected', 'cancelled', 'refunded', 'charged_back')")
     
     # Create payments table
     op.create_table('payments',
-    sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('order_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False),
-    sa.Column('business_id', postgresql.UUID(as_uuid=True), nullable=False),
+    sa.Column('id', sa.String(36), nullable=False),
+    sa.Column('order_id', sa.String(36), nullable=False),
+    sa.Column('user_id', sa.String(36), nullable=False),
+    sa.Column('business_id', sa.String(36), nullable=False),
     sa.Column('mercadopago_payment_id', sa.String(), nullable=True),
     sa.Column('preference_id', sa.String(), nullable=True),
     sa.Column('external_reference', sa.String(), nullable=True),
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('currency', sa.String(), nullable=True),
-    sa.Column('status', sa.Enum(name='paymentstatus'), nullable=True),
+    sa.Column('status', sa.String(), nullable=True),  # Changed from Enum for SQLite compatibility
     sa.Column('payment_method', sa.String(), nullable=True),
     sa.Column('payment_type', sa.String(), nullable=True),
     sa.Column('transaction_amount', sa.Float(), nullable=True),
@@ -40,7 +40,7 @@ def upgrade() -> None:
     sa.Column('total_paid_amount', sa.Float(), nullable=True),
     sa.Column('metadata', sa.Text(), nullable=True),
     sa.Column('webhook_data', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('processed_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['business_id'], ['businesses.id'], ),
@@ -64,5 +64,5 @@ def downgrade() -> None:
     # Drop table
     op.drop_table('payments')
     
-    # Drop enum
-    op.execute("DROP TYPE paymentstatus")
+    # Drop enum (only for PostgreSQL)
+    # op.execute("DROP TYPE paymentstatus")

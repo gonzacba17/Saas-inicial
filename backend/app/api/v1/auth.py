@@ -80,7 +80,7 @@ def require_role(allowed_roles: List[str]):
             allowed_roles_str = [str(role).lower() for role in allowed_roles]
             
             # Check if user has required role or is admin
-            if user_role_str not in allowed_roles_str and "admin" not in allowed_roles_str:
+            if user_role_str not in allowed_roles_str and user_role_str != "admin":
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"Access denied. Required roles: {allowed_roles}, user role: {user_role}"

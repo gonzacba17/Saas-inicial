@@ -50,7 +50,7 @@ class SecretsBackupResponse(BaseModel):
 
 def check_admin_permission(current_user: UserSchema):
     """Check if user has admin permissions for secrets management"""
-    if not hasattr(current_user, 'role') or current_user.role != UserRole.ADMIN:
+    if not hasattr(current_user, 'role') or current_user.role != UserRole.admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin role required for secrets management"

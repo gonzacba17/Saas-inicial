@@ -95,13 +95,23 @@ class ValidationErrorHandler:
         errors = []
         
         for error in exc_info.get('errors', []):
-            field_path = ' -> '.join(str(loc) for loc in error.get('loc', []))
-            errors.append({
-                "field": field_path,
-                "message": error.get('msg', 'Validation error'),
-                "type": error.get('type', 'validation_error'),
-                "input": error.get('input')
-            })
+            # Handle both dict and string errors
+            if isinstance(error, dict):
+                field_path = ' -> '.join(str(loc) for loc in error.get('loc', []))
+                errors.append({
+                    "field": field_path,
+                    "message": error.get('msg', 'Validation error'),
+                    "type": error.get('type', 'validation_error'),
+                    "input": error.get('input')
+                })
+            else:
+                # Handle string errors
+                errors.append({
+                    "field": "unknown",
+                    "message": str(error),
+                    "type": "validation_error",
+                    "input": None
+                })
         
         return {
             "error": "validation_error",

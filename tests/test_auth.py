@@ -12,7 +12,7 @@ def test_register_user():
     user_data = {
         "email": "test@example.com",
         "username": "testuser",
-        "password": "testpass123"
+        "password": "TestPass123!"
     }
     
     response = client.post("/api/v1/auth/register", json=user_data)
@@ -32,14 +32,14 @@ def test_login_user():
     user_data = {
         "email": "test@example.com", 
         "username": "testuser",
-        "password": "testpass123"
+        "password": "TestPass123!"
     }
     client.post("/api/v1/auth/register", json=user_data)
     
     # Test login
     login_data = {
         "username": "testuser",
-        "password": "testpass123"
+        "password": "TestPass123!"
     }
     
     response = client.post("/api/v1/auth/login", data=login_data)
@@ -65,13 +65,13 @@ def test_get_current_user():
     user_data = {
         "email": "test@example.com",
         "username": "testuser", 
-        "password": "testpass123"
+        "password": "TestPass123!"
     }
     client.post("/api/v1/auth/register", json=user_data)
     
     login_response = client.post("/api/v1/auth/login", data={
         "username": "testuser",
-        "password": "testpass123"
+        "password": "TestPass123!"
     })
     
     if login_response.status_code == 200:

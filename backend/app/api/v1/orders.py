@@ -35,7 +35,7 @@ def check_order_permission(
     
     # Business owners/managers can access orders for their business
     if required_roles is None:
-        required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+        required_roles = [UserBusinessRole.owner, UserBusinessRole.manager]
     
     return UserBusinessCRUD.has_permission(db, current_user.id, order.business_id, required_roles)
 
@@ -60,7 +60,7 @@ def check_business_permission(
 ) -> bool:
     """Check if user has permission to access/modify business."""
     if required_roles is None:
-        required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+        required_roles = [UserBusinessRole.owner, UserBusinessRole.manager]
     
     return UserBusinessCRUD.has_permission(db, current_user.id, business_id, required_roles)
 

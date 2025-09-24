@@ -62,9 +62,9 @@ class OrderStatus(enum.Enum):
     CANCELLED = "cancelled"
 
 class UserBusinessRole(enum.Enum):
-    OWNER = "owner"
-    MANAGER = "manager"
-    EMPLOYEE = "employee"
+    owner = "owner"
+    manager = "manager"
+    employee = "employee"
 
 class AIAssistantType(enum.Enum):
     PRODUCT_SUGGESTION = "product_suggestion"
@@ -89,9 +89,9 @@ class PaymentStatus(enum.Enum):
 
 class UserRole(enum.Enum):
     """User roles for system-wide permissions."""
-    USER = "user"
-    OWNER = "owner"  
-    ADMIN = "admin"
+    user = "user"
+    owner = "owner"  
+    admin = "admin"
 
 class User(Base):
     __tablename__ = "users"
@@ -100,7 +100,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -185,7 +185,7 @@ class UserBusiness(Base):
     id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
     business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
-    role = Column(Enum(UserBusinessRole), default=UserBusinessRole.OWNER)
+    role = Column(Enum(UserBusinessRole), default=UserBusinessRole.owner)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -462,7 +462,7 @@ class UserBusinessCRUD:
         association = db.query(UserBusiness).filter(
             UserBusiness.user_id == user_id,
             UserBusiness.business_id == business_id,
-            UserBusiness.role == UserBusinessRole.OWNER,
+            UserBusiness.role == UserBusinessRole.owner,
             UserBusiness.is_active == True
         ).first()
         return association is not None
@@ -471,7 +471,7 @@ class UserBusinessCRUD:
     def has_permission(db, user_id, business_id, required_roles=None):
         """Check if user has permission to access business."""
         if required_roles is None:
-            required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+            required_roles = [UserBusinessRole.owner, UserBusinessRole.manager]
         
         association = db.query(UserBusiness).filter(
             UserBusiness.user_id == user_id,

@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '003'
+revision = '003_add_user_role_field'
 down_revision = '002_add_payment'
 branch_labels = None
 depends_on = None
@@ -35,12 +35,12 @@ def upgrade():
         # For SQLite, use String with check constraint
         op.add_column('users', sa.Column('role', sa.String(), nullable=False, server_default='user'))
         
-        # Add check constraint for SQLite
-        op.create_check_constraint(
-            'check_user_role', 
-            'users', 
-            "role IN ('user', 'owner', 'admin')"
-        )
+        # Add check constraint for SQLite using batch mode
+        with op.batch_alter_table('users') as batch_op:
+            batch_op.create_check_constraint(
+                'check_user_role', 
+                "role IN ('user', 'owner', 'admin')"
+            )
         
         # Remove server_default after column creation
         op.alter_column('users', 'role', server_default=None)
@@ -59,8 +59,7 @@ def downgrade():
         user_role_enum = postgresql.ENUM('user', 'owner', 'admin', name='userrole')
         user_role_enum.drop(bind)
     else:
-        # For SQLite, drop check constraint first
-        op.drop_constraint('check_user_role', 'users', type_='check')
-        
-        # Drop role column
-        op.drop_column('users', 'role')
+        # For SQLite, drop check constraint first using batch mode
+        with op.batch_alter_table('users') as batch_op:
+            batch_op.drop_constraint('check_user_role', type_='check')
+            batch_op.drop_column('role')

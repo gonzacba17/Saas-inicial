@@ -54,6 +54,16 @@ class UserCreate(UserBase):
     @classmethod
     def validate_password(cls, v):
         return validate_password(v)
+    
+    @field_validator('role')
+    @classmethod
+    def validate_role(cls, v):
+        if v is None:
+            return "user"  # Default role
+        valid_roles = ["user", "owner", "admin"]
+        if v.lower() not in valid_roles:
+            raise ValueError(f"Invalid role: {v}. Must be one of {valid_roles}")
+        return v.lower()
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -380,6 +390,9 @@ class Payment(PaymentInDBBase):
 
 class PaymentInDB(PaymentInDBBase):
     pass
+
+class PaymentPreferenceRequest(BaseModel):
+    order_id: UUID
 
 class PaymentPreference(BaseModel):
     success: bool

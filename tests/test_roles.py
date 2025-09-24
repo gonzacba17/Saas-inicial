@@ -13,7 +13,7 @@ def create_user_with_role(username: str, email: str, role: str = "user"):
     user_data = {
         "email": email,
         "username": username,
-        "password": "testpass123",
+        "password": "TestPass123!",
         "role": role
     }
     
@@ -21,7 +21,7 @@ def create_user_with_role(username: str, email: str, role: str = "user"):
     return response
 
 
-def get_auth_token(username: str, password: str = "testpass123"):
+def get_auth_token(username: str, password: str = "TestPass123!"):
     """Helper function to get auth token for user."""
     login_response = client.post("/api/v1/auth/login", data={
         "username": username,
@@ -207,7 +207,7 @@ def test_role_validation_on_registration():
         user_data = {
             "email": f"roletest_{role}@test.com",
             "username": f"roletest_{role}",
-            "password": "testpass123",
+            "password": "TestPass123!",
             "role": role
         }
         
@@ -223,7 +223,7 @@ def test_role_validation_on_registration():
     invalid_user_data = {
         "email": "invalid_role@test.com",
         "username": "invalid_role",
-        "password": "testpass123",
+        "password": "TestPass123!",
         "role": "invalid_role"
     }
     

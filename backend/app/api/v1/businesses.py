@@ -26,7 +26,7 @@ def check_business_permission(
 ) -> bool:
     """Check if user has permission to access/modify business."""
     if required_roles is None:
-        required_roles = [UserBusinessRole.OWNER, UserBusinessRole.MANAGER]
+        required_roles = [UserBusinessRole.owner, UserBusinessRole.manager]
     
     return UserBusinessCRUD.has_permission(db, current_user.id, business_id, required_roles)
 
@@ -83,7 +83,7 @@ def create_business(
         user_business_data = {
             "user_id": current_user.id,
             "business_id": db_business.id,
-            "role": UserBusinessRole.OWNER
+            "role": UserBusinessRole.owner
         }
         UserBusinessCRUD.create(db, user_business_data)
         
@@ -184,7 +184,7 @@ def delete_business(
         raise HTTPException(status_code=404, detail="Business not found")
     
     # Check permissions (only owners can delete)
-    require_business_permission(business_id, current_user, db, [UserBusinessRole.OWNER])
+    require_business_permission(business_id, current_user, db, [UserBusinessRole.owner])
     
     business.is_active = False
     db.commit()

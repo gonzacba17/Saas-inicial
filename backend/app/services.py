@@ -82,7 +82,7 @@ def create_user(db: Session, user: UserCreate) -> User:
         "email": user.email,
         "username": user.username,
         "hashed_password": hashed_password,
-        "role": getattr(user, 'role', UserRole.USER),  # Default to USER role
+        "role": getattr(user, 'role', UserRole.user),  # Default to user role
         "is_active": True,
         "is_superuser": False
     }

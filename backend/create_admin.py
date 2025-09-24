@@ -49,7 +49,7 @@ def create_admin_user():
             "email": admin_email,
             "username": "admin",
             "hashed_password": get_password_hash("Admin1234!"),
-            "role": UserRole.ADMIN,
+            "role": UserRole.admin,
             "is_active": True,
             "is_superuser": True
         }
