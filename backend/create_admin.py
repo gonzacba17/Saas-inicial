@@ -30,7 +30,7 @@ def create_admin_user():
     
     try:
         # Check if admin user already exists
-        admin_email = "admin@saas.test"
+        admin_email = "admin@example.com"
         existing_admin = get_user_by_email(db, admin_email)
         
         if existing_admin:
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         print("2. Access the API documentation:")
         print("   http://localhost:8000/docs")
         print("3. Login with admin credentials:")
-        print("   Email: admin@saas.test")
+        print("   Email: admin@example.com")
         print("   Password: Admin1234!")
         
     except Exception as e:

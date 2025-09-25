@@ -1,4 +1,4 @@
-# 🧪 Instrucciones de Testing - SaaS Cafeterías
+# 🧪 Instrucciones de Testing - SaaS 
 
 ## 📋 Organización de Tests
 

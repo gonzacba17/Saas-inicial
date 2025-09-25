@@ -75,7 +75,7 @@ def require_business_permission(
 # PRODUCT ENDPOINTS
 # ========================================
 
-@router.get("/", response_model=List[ProductSchema])
+@router.get("", response_model=List[ProductSchema])
 def list_products(
     skip: int = 0, 
     limit: int = 100, 
@@ -103,7 +103,7 @@ def list_business_products(
     products = ProductCRUD.get_by_business(db, business_id, skip=skip, limit=limit)
     return products
 
-@router.post("/", response_model=ProductSchema)
+@router.post("", response_model=ProductSchema)
 def create_product(
     product: ProductCreate, 
     db: Session = Depends(get_db), 
@@ -118,7 +118,7 @@ def create_product(
     # Check permissions
     require_business_permission(product.business_id, current_user, db)
     
-    return ProductCRUD.create(db, product.dict())
+    return ProductCRUD.create(db, product.model_dump())
 
 @router.get("/{product_id}", response_model=ProductSchema)
 def get_product(
@@ -147,7 +147,7 @@ def update_product(
     # Check permissions
     require_product_permission(product_id, current_user, db)
     
-    update_data = product_update.dict(exclude_unset=True)
+    update_data = product_update.model_dump(exclude_unset=True)
     return ProductCRUD.update(db, product_id, update_data)
 
 @router.delete("/{product_id}")

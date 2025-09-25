@@ -50,7 +50,7 @@ def admin_token(client):
     """Get admin authentication token."""
     # Try to create admin user first
     admin_data = {
-        "email": "admin@saas.test",
+        "email": "admin@example.com",
         "username": "admin", 
         "password": "Admin1234!",
         "role": "admin"

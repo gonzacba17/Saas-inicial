@@ -112,7 +112,7 @@ def list_business_orders(
     orders = OrderCRUD.get_business_orders(db, business_id, skip=skip, limit=limit)
     return orders
 
-@router.post("/", response_model=OrderSchema)
+@router.post("", response_model=OrderSchema)
 def create_order(
     order: OrderCreate, 
     db: Session = Depends(get_db), 
@@ -227,7 +227,7 @@ def update_order(
             detail="Cannot update completed or cancelled orders"
         )
     
-    update_data = order_update.dict(exclude_unset=True)
+    update_data = order_update.model_dump(exclude_unset=True)
     
     # Update order fields
     for field, value in update_data.items():

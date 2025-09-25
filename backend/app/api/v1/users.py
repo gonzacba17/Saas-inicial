@@ -17,7 +17,7 @@ router = APIRouter()
 # USER MANAGEMENT ENDPOINTS
 # ========================================
 
-@router.get("/", response_model=List[UserSchema])
+@router.get("", response_model=List[UserSchema])
 def list_users(
     skip: int = 0, 
     limit: int = 100, 

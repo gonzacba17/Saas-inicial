@@ -47,18 +47,18 @@ def require_business_permission(
 # BUSINESS ENDPOINTS
 # ========================================
 
-@router.get("/", response_model=List[BusinessSchema])
+@router.get("", response_model=List[BusinessSchema])
 def list_businesses(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db), 
-    current_user: UserSchema = Depends(get_current_user)
+    current_user: UserSchema = Depends(require_role(["admin", "owner"]))
 ):
     """List all active businesses."""
     businesses = db.query(Business).filter(Business.is_active == True).offset(skip).limit(limit).all()
     return businesses
 
-@router.post("/", response_model=BusinessSchema)
+@router.post("", response_model=BusinessSchema)
 def create_business(
     business: BusinessCreate, 
     db: Session = Depends(get_db), 
@@ -74,7 +74,7 @@ def create_business(
             )
         
         # Create business
-        db_business = Business(**business.dict())
+        db_business = Business(**business.model_dump())
         db.add(db_business)
         db.commit()
         db.refresh(db_business)
@@ -143,7 +143,7 @@ def update_business(
         require_business_permission(business_id, current_user, db)
         
         # Validate update data
-        update_data = business_update.dict(exclude_unset=True)
+        update_data = business_update.model_dump(exclude_unset=True)
         if "name" in update_data and (not update_data["name"] or len(update_data["name"].strip()) == 0):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -220,7 +220,7 @@ def create_user_business(
     if existing:
         raise HTTPException(status_code=400, detail="User already associated with this business")
     
-    user_business_data = user_business.dict()
+    user_business_data = user_business.model_dump()
     user_business_data["user_id"] = current_user.id
     
     return UserBusinessCRUD.create(db, user_business_data)

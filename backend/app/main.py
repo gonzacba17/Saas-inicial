@@ -32,11 +32,7 @@ async def startup_event():
 # Health check endpoint
 @app.get("/health")
 def health_check():
-    return {
-        "status": "healthy",
-        "version": settings.version,
-        "environment": settings.environment
-    }
+    return {"status": "ok"}
 
 @app.get("/")
 def read_root():

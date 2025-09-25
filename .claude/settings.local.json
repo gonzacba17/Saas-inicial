@@ -50,7 +50,10 @@
       "Bash(USE_SQLITE=true PYTHONPATH=backend python3 -m alembic -c backend/alembic.ini upgrade head)",
       "Bash(USE_SQLITE=true PYTHONPATH=. python3 -m alembic upgrade head)",
       "Bash(USE_SQLITE=true PYTHONPATH=. python3 -m alembic downgrade base)",
-      "Bash(USE_SQLITE=true PYTHONPATH=. python3 create_test_db.py)"
+      "Bash(USE_SQLITE=true PYTHONPATH=. python3 create_test_db.py)",
+      "Bash(pytest:*)",
+      "Bash(sudo rm:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
