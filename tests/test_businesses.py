@@ -1,230 +1,222 @@
 """
-Tests for businesses endpoints - Complete CRUD testing.
+Tests for businesses endpoints - Corregidos
 """
 import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-
-client = TestClient(app)
+import time
 
 
-def get_auth_headers():
-    """Helper function to get auth headers."""
-    # Register and login user
-    user_data = {
-        "email": "businesstest@example.com",
-        "username": "businessuser",
-        "password": "TestPass123!"
+def test_create_business(client, admin_token):
+    """Test creating a new business."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    timestamp = int(time.time())
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    business_data = {
+        "name": f"Test Coffee Shop {timestamp}",
+        "description": "A test coffee shop for unit testing",
+        "address": "123 Test Street, Test City",
+        "phone": "+1234567890",
+        "email": f"test{timestamp}@coffeeshop.com",
+        "business_type": "restaurant"
     }
-    client.post("/api/v1/auth/register", json=user_data)
     
-    login_response = client.post("/api/v1/auth/login", data={
-        "username": "businessuser",
-        "password": "TestPass123!"
-    })
+    response = client.post("/api/v1/businesses", json=business_data, headers=headers)
+    assert response.status_code == 200
     
-    if login_response.status_code == 200:
-        token = login_response.json()["access_token"]
-        return {"Authorization": f"Bearer {token}"}
-    return {}
+    data = response.json()
+    assert data["name"] == business_data["name"]
+    assert data["description"] == business_data["description"]
+    assert data["address"] == business_data["address"]
+    assert "id" in data
+    assert data["is_active"] == True
 
 
-class TestBusinessesCRUD:
-    """Test class for complete businesses CRUD operations."""
+def test_list_businesses(client, admin_token):
+    """Test listing all businesses."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
     
-    def test_create_business(self):
-        """Test creating a new business."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        business_data = {
-            "name": "Test Coffee Shop",
-            "description": "A test coffee shop for unit testing",
-            "address": "123 Test Street, Test City",
-            "phone": "+1234567890",
-            "email": "test@coffeeshop.com",
-            "business_type": "restaurant"
-        }
-        
-        response = client.post("/api/v1/businesses", json=business_data, headers=headers)
-        
-        if response.status_code == 201 or response.status_code == 200:
-            data = response.json()
-            assert data["name"] == business_data["name"]
-            assert data["description"] == business_data["description"]
-            assert data["address"] == business_data["address"]
-            assert "id" in data
-            assert data["is_active"] == True
-            return data["id"]  # Return ID for other tests
-        else:
-            pytest.skip(f"Business creation failed: {response.text}")
-    
-    def test_list_businesses(self):
-        """Test listing all businesses."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        response = client.get("/api/v1/businesses", headers=headers)
-        assert response.status_code == 200
-        assert isinstance(response.json(), list)
-    
-    def test_get_business_by_id(self):
-        """Test getting a specific business by ID."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        # First create a business
-        business_id = self.test_create_business()
-        if not business_id:
-            pytest.skip("Could not create business for testing")
-        
-        response = client.get(f"/api/v1/businesses/{business_id}", headers=headers)
-        
-        if response.status_code == 200:
-            data = response.json()
-            assert data["id"] == business_id
-            assert "name" in data
-        else:
-            # Business might not exist, which is also valid for testing
-            assert response.status_code in [200, 404]
-    
-    def test_update_business(self):
-        """Test updating a business."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        # First create a business
-        business_id = self.test_create_business()
-        if not business_id:
-            pytest.skip("Could not create business for testing")
-        
-        update_data = {
-            "name": "Updated Coffee Shop",
-            "description": "Updated description for testing"
-        }
-        
-        response = client.put(f"/api/v1/businesses/{business_id}", json=update_data, headers=headers)
-        
-        if response.status_code == 200:
-            data = response.json()
-            assert data["name"] == update_data["name"]
-            assert data["description"] == update_data["description"]
-        else:
-            # May fail due to permissions or business not found
-            assert response.status_code in [200, 403, 404]
-    
-    def test_delete_business(self):
-        """Test soft deleting a business."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        # First create a business
-        business_id = self.test_create_business()
-        if not business_id:
-            pytest.skip("Could not create business for testing")
-        
-        response = client.delete(f"/api/v1/businesses/{business_id}", headers=headers)
-        
-        # Should either succeed or fail due to permissions
-        assert response.status_code in [200, 403, 404]
-        
-        if response.status_code == 200:
-            data = response.json()
-            assert "message" in data
-    
-    def test_create_business_unauthorized(self):
-        """Test creating business without authentication."""
-        business_data = {
-            "name": "Unauthorized Coffee Shop",
-            "description": "This should fail"
-        }
-        
-        response = client.post("/api/v1/businesses", json=business_data)
-        assert response.status_code == 401
-    
-    def test_create_business_invalid_data(self):
-        """Test creating business with invalid data."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        # Missing required 'name' field
-        invalid_data = {
-            "description": "Business without name"
-        }
-        
-        response = client.post("/api/v1/businesses", json=invalid_data, headers=headers)
-        assert response.status_code == 422  # Validation error
-    
-    def test_get_nonexistent_business(self):
-        """Test getting a business that doesn't exist."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        fake_id = "550e8400-e29b-41d4-a716-446655440000"
-        response = client.get(f"/api/v1/businesses/{fake_id}", headers=headers)
-        assert response.status_code == 404
-    
-    def test_business_permissions(self):
-        """Test that business operations respect permissions."""
-        headers = get_auth_headers()
-        if not headers:
-            pytest.skip("Could not authenticate user")
-        
-        # Create business first
-        business_id = self.test_create_business()
-        if not business_id:
-            pytest.skip("Could not create business for testing")
-        
-        # Create another user to test permissions
-        other_user_data = {
-            "email": "other@example.com",
-            "username": "otheruser",
-            "password": "TestPass123!"
-        }
-        client.post("/api/v1/auth/register", json=other_user_data)
-        
-        other_login_response = client.post("/api/v1/auth/login", data={
-            "username": "otheruser",
-            "password": "TestPass123!"
-        })
-        
-        if other_login_response.status_code == 200:
-            other_token = other_login_response.json()["access_token"]
-            other_headers = {"Authorization": f"Bearer {other_token}"}
-            
-            # Try to update business as different user (should fail)
-            update_data = {"name": "Hacked Business"}
-            response = client.put(f"/api/v1/businesses/{business_id}", json=update_data, headers=other_headers)
-            
-            # Should fail with 403 Forbidden
-            assert response.status_code in [403, 404]
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = client.get("/api/v1/businesses", headers=headers)
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
 
 
-def test_business_workflow():
-    """Test complete business workflow."""
-    headers = get_auth_headers()
-    if not headers:
+def test_get_business_by_id(client, admin_token, test_business):
+    """Test getting a specific business by ID."""
+    if not admin_token or not test_business:
+        pytest.skip("Could not set up test data")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = client.get(f"/api/v1/businesses/{test_business['id']}", headers=headers)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == test_business["id"]
+    assert data["name"] == test_business["name"]
+
+
+def test_update_business(client, admin_token, test_business):
+    """Test updating a business."""
+    if not admin_token or not test_business:
+        pytest.skip("Could not set up test data")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    update_data = {
+        "name": "Updated Coffee Shop",
+        "description": "Updated description for testing"
+    }
+    
+    response = client.put(f"/api/v1/businesses/{test_business['id']}", json=update_data, headers=headers)
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert data["name"] == update_data["name"]
+    assert data["description"] == update_data["description"]
+
+
+def test_delete_business(client, admin_token):
+    """Test soft deleting a business."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    # Create a business to delete
+    timestamp = int(time.time())
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    business_data = {
+        "name": f"Delete Test Business {timestamp}",
+        "description": "Business to be deleted",
+        "business_type": "cafe"
+    }
+    
+    create_response = client.post("/api/v1/businesses", json=business_data, headers=headers)
+    if create_response.status_code != 200:
+        pytest.skip("Could not create business for delete test")
+    
+    business_id = create_response.json()["id"]
+    
+    # Delete the business
+    response = client.delete(f"/api/v1/businesses/{business_id}", headers=headers)
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert "message" in data
+
+
+def test_create_business_unauthorized(client):
+    """Test creating business without authentication."""
+    business_data = {
+        "name": "Unauthorized Coffee Shop",
+        "description": "This should fail"
+    }
+    
+    response = client.post("/api/v1/businesses", json=business_data)
+    assert response.status_code == 401
+
+
+def test_create_business_invalid_data(client, admin_token):
+    """Test creating business with invalid data."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    
+    # Missing required 'name' field
+    invalid_data = {
+        "description": "Business without name"
+    }
+    
+    response = client.post("/api/v1/businesses", json=invalid_data, headers=headers)
+    assert response.status_code == 422  # Validation error
+
+
+def test_get_nonexistent_business(client, admin_token):
+    """Test getting a business that doesn't exist."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    fake_id = "550e8400-e29b-41d4-a716-446655440000"
+    response = client.get(f"/api/v1/businesses/{fake_id}", headers=headers)
+    assert response.status_code == 404
+
+
+def test_user_can_create_business(client, user_token):
+    """Test that users can create businesses (current implementation allows this)."""
+    if not user_token:
         pytest.skip("Could not authenticate user")
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    timestamp = int(time.time())
+    business_data = {
+        "name": f"User Business Test {timestamp}",
+        "description": "Users can create businesses in current implementation",
+        "business_type": "cafe"
+    }
+    
+    response = client.post("/api/v1/businesses", json=business_data, headers=headers)
+    # Current implementation allows users to create businesses
+    assert response.status_code == 200
+    
+    business = response.json()
+    assert business["name"] == business_data["name"]
+    assert "id" in business
+
+
+def test_user_can_view_businesses(client, user_token, test_business):
+    """Test that users can view businesses."""
+    if not user_token or not test_business:
+        pytest.skip("Could not set up test data")
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    
+    # Test list businesses
+    list_response = client.get("/api/v1/businesses", headers=headers)
+    assert list_response.status_code == 200
+    assert isinstance(list_response.json(), list)
+    
+    # Test get specific business
+    get_response = client.get(f"/api/v1/businesses/{test_business['id']}", headers=headers)
+    assert get_response.status_code == 200
+    data = get_response.json()
+    assert data["id"] == test_business["id"]
+
+
+def test_user_cannot_modify_business(client, user_token, test_business):
+    """Test that regular users cannot modify businesses."""
+    if not user_token or not test_business:
+        pytest.skip("Could not set up test data")
+    
+    headers = {"Authorization": f"Bearer {user_token}"}
+    update_data = {"name": "Hacked Business Name"}
+    
+    # Test update
+    update_response = client.put(f"/api/v1/businesses/{test_business['id']}", json=update_data, headers=headers)
+    assert update_response.status_code == 403
+    
+    # Test delete
+    delete_response = client.delete(f"/api/v1/businesses/{test_business['id']}", headers=headers)
+    assert delete_response.status_code == 403
+
+
+def test_business_workflow(client, admin_token):
+    """Test complete business workflow."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    timestamp = int(time.time())
     
     # 1. Create business
     business_data = {
-        "name": "Workflow Test Cafe",
+        "name": f"Workflow Test Cafe {timestamp}",
         "description": "Testing complete workflow",
         "business_type": "cafe"
     }
     
     create_response = client.post("/api/v1/businesses", json=business_data, headers=headers)
-    
-    if create_response.status_code not in [200, 201]:
-        pytest.skip("Could not create business for workflow test")
-    
+    assert create_response.status_code == 200
     business_id = create_response.json()["id"]
     
     # 2. List businesses and verify it's included
@@ -245,7 +237,59 @@ def test_business_workflow():
     # 4. Update business
     update_data = {"description": "Updated workflow description"}
     update_response = client.put(f"/api/v1/businesses/{business_id}", json=update_data, headers=headers)
+    assert update_response.status_code == 200
     
-    if update_response.status_code == 200:
-        updated_business = update_response.json()
-        assert updated_business["description"] == update_data["description"]
+    updated_business = update_response.json()
+    assert updated_business["description"] == update_data["description"]
+
+
+def test_business_type_validation(client, admin_token):
+    """Test business type validation."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    timestamp = int(time.time())
+    
+    # Test valid business types
+    valid_types = ["restaurant", "cafe", "retail", "service"]
+    
+    for business_type in valid_types:
+        business_data = {
+            "name": f"Test {business_type.title()} {timestamp}",
+            "description": f"Testing {business_type} type",
+            "business_type": business_type
+        }
+        
+        response = client.post("/api/v1/businesses", json=business_data, headers=headers)
+        assert response.status_code == 200
+        assert response.json()["business_type"] == business_type
+
+
+def test_business_required_fields(client, admin_token):
+    """Test business required fields validation."""
+    if not admin_token:
+        pytest.skip("Could not authenticate admin")
+    
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    
+    # Test missing name
+    data_missing_name = {
+        "description": "Business without name",
+        "business_type": "cafe"
+    }
+    response = client.post("/api/v1/businesses", json=data_missing_name, headers=headers)
+    assert response.status_code == 422
+    
+    # Test empty name
+    data_empty_name = {
+        "name": "",
+        "description": "Business with empty name",
+        "business_type": "cafe"
+    }
+    response = client.post("/api/v1/businesses", json=data_empty_name, headers=headers)
+    assert response.status_code == 422
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
