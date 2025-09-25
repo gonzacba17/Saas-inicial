@@ -110,7 +110,21 @@ def get_business(
     db: Session = Depends(get_db), 
     current_user: UserSchema = Depends(get_current_user)
 ):
-    """Get business by ID."""
+    """Get business by ID (admin or business member only)."""
+    # Check if user is admin or has access to this business
+    user_role = current_user.role
+    if hasattr(user_role, 'value'):
+        user_role = user_role.value
+    
+    is_admin = str(user_role).lower() == "admin"
+    has_business_access = check_business_permission(business_id, current_user, db)
+    
+    if not is_admin and not has_business_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions to access this business"
+        )
+    
     business = db.query(Business).filter(Business.id == business_id).first()
     if business is None:
         raise HTTPException(status_code=404, detail="Business not found")

@@ -135,7 +135,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "access_token": access_token, 
         "token_type": "bearer",
         "user_id": str(user.id),
-        "role": user.role
+        "role": user.role.value if hasattr(user.role, 'value') else str(user.role)
     }
 
 @router.post("/refresh", response_model=Token)
@@ -149,7 +149,7 @@ def refresh_token(current_user: UserSchema = Depends(get_current_user)):
         "access_token": access_token, 
         "token_type": "bearer",
         "user_id": str(current_user.id),
-        "role": current_user.role
+        "role": current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
     }
 
 @router.get("/me", response_model=UserSchema)

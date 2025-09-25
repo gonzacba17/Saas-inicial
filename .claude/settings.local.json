@@ -53,7 +53,9 @@
       "Bash(USE_SQLITE=true PYTHONPATH=. python3 create_test_db.py)",
       "Bash(pytest:*)",
       "Bash(sudo rm:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(kill:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

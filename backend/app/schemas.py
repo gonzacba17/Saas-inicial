@@ -19,6 +19,8 @@ from app.middleware.validation import (
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user_id: Optional[str] = None
+    role: Optional[str] = None
 
 class TokenData(BaseModel):
     username: Optional[str] = None

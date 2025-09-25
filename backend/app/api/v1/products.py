@@ -13,7 +13,7 @@ from app.schemas import (
     Product as ProductSchema, ProductCreate, ProductUpdate,
     User as UserSchema
 )
-from app.api.v1.auth import get_current_user
+from app.api.v1.auth import get_current_user, require_role
 
 router = APIRouter()
 
@@ -80,9 +80,9 @@ def list_products(
     skip: int = 0, 
     limit: int = 100, 
     db: Session = Depends(get_db), 
-    current_user: UserSchema = Depends(get_current_user)
+    current_user: UserSchema = Depends(require_role(["admin"]))
 ):
-    """List all available products."""
+    """List all available products (admin only)."""
     products = ProductCRUD.get_all(db, skip=skip, limit=limit)
     return products
 
@@ -94,11 +94,14 @@ def list_business_products(
     db: Session = Depends(get_db), 
     current_user: UserSchema = Depends(get_current_user)
 ):
-    """List products for a specific business."""
+    """List products for a specific business (admin or business member only)."""
     # Check if business exists
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
+    
+    # Check permissions
+    require_business_permission(business_id, current_user, db)
     
     products = ProductCRUD.get_by_business(db, business_id, skip=skip, limit=limit)
     return products
@@ -126,10 +129,14 @@ def get_product(
     db: Session = Depends(get_db), 
     current_user: UserSchema = Depends(get_current_user)
 ):
-    """Get product by ID."""
+    """Get product by ID (admin or business member only)."""
     product = ProductCRUD.get_by_id(db, product_id)
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check permissions for this product's business
+    require_product_permission(product_id, current_user, db)
+    
     return product
 
 @router.put("/{product_id}", response_model=ProductSchema)
