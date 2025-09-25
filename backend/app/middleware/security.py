@@ -17,23 +17,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.calls = calls
         self.period = period
         self.redis_client = None
+        self.redis_checked = False
         self.memory_store: Dict[str, Dict[str, float]] = {}
-        
-        # Try to connect to Redis, fall back to in-memory if not available
-        try:
-            self.redis_client = redis.Redis(
-                host=settings.redis_host if hasattr(settings, 'redis_host') else 'localhost',
-                port=settings.redis_port if hasattr(settings, 'redis_port') else 6379,
-                decode_responses=True
-            )
-            self.redis_client.ping()
-        except Exception:
-            print("Redis not available, using in-memory rate limiting")
-            self.redis_client = None
     
     async def dispatch(self, request: Request, call_next):
-        # Skip rate limiting for health checks and static files
-        if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
+        # Skip rate limiting for health checks and static files (ultra-fast path)
+        if request.url.path.startswith("/health") or request.url.path in ["/docs", "/redoc", "/openapi.json"]:
             return await call_next(request)
         
         client_ip = self._get_client_ip(request)
@@ -58,10 +47,31 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     
     def _is_rate_limited(self, client_ip: str, current_time: float) -> bool:
         """Check if client is rate limited."""
+        # Lazy Redis initialization
+        if not self.redis_checked:
+            self._init_redis()
+        
         if self.redis_client:
             return self._redis_rate_limit(client_ip, current_time)
         else:
             return self._memory_rate_limit(client_ip, current_time)
+    
+    def _init_redis(self):
+        """Initialize Redis connection lazily."""
+        try:
+            self.redis_client = redis.Redis(
+                host=settings.redis_host if hasattr(settings, 'redis_host') else 'localhost',
+                port=settings.redis_port if hasattr(settings, 'redis_port') else 6379,
+                decode_responses=True,
+                socket_connect_timeout=0.1,  # Fast timeout for connection
+                socket_timeout=0.1
+            )
+            self.redis_client.ping()
+        except Exception:
+            print("Redis connection failed, using memory cache")
+            self.redis_client = None
+        finally:
+            self.redis_checked = True
     
     def _redis_rate_limit(self, client_ip: str, current_time: float) -> bool:
         """Rate limiting using Redis."""
