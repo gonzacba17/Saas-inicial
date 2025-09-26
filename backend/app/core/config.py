@@ -24,18 +24,18 @@ class Settings(BaseSettings):
     # ==============================================
     # CONFIGURACIÓN JWT
     # ==============================================
-    secret_key: str = "saas-cafeterias-super-secret-key-2024-production-ready-minimum-32-chars"
+    secret_key: str = os.getenv("SECRET_KEY", "change-this-in-production")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS POSTGRESQL
     # ==============================================
-    postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "saas_db"
+    postgres_user: str = os.getenv("POSTGRES_USER", "postgres")
+    postgres_password: str = os.getenv("POSTGRES_PASSWORD", "postgres")
+    postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
+    postgres_port: int = int(os.getenv("POSTGRES_PORT", "5432"))
+    postgres_db: str = os.getenv("POSTGRES_DB", "saas_db")
     
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS SQLITE (DESARROLLO)

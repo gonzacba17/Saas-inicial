@@ -33,7 +33,7 @@ export const Login: React.FC = () => {
       const userResponse = await apiService.getCurrentUser();
       
       login(authResponse.access_token, userResponse);
-      navigate('/cafes');
+      navigate('/businesses');
     } catch (err: any) {
       const processedError = handleError(err);
       setError(processedError);

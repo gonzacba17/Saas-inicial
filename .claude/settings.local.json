@@ -55,7 +55,10 @@
       "Bash(sudo rm:*)",
       "Bash(pkill:*)",
       "Bash(kill:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(node:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm outdated)"
     ],
     "deny": []
   }

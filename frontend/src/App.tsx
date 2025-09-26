@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Businesses } from './pages/Businesses';
@@ -23,57 +24,91 @@ function App() {
   }, [token]);
 
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route 
-          path="/login" 
-          element={!isAuthenticated ? <Login /> : <Navigate to="/businesses" />} 
-        />
-        <Route 
-          path="/register" 
-          element={!isAuthenticated ? <Register /> : <Navigate to="/businesses" />} 
-        />
-        
-        {/* Protected routes */}
-        <Route 
-          path="/businesses" 
-          element={isAuthenticated ? <Businesses /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/businesses/:businessId" 
-          element={isAuthenticated ? <BusinessDetail /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/checkout" 
-          element={isAuthenticated ? <Checkout /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/orders" 
-          element={isAuthenticated ? <Orders /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/businesses/:businessId/dashboard" 
-          element={isAuthenticated ? <BusinessDashboard /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/dashboard" 
-          element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
-        />
-        
-        {/* Default redirect */}
-        <Route 
-          path="/" 
-          element={<Navigate to={isAuthenticated ? "/businesses" : "/login"} />} 
-        />
-        
-        {/* Catch all route */}
-        <Route 
-          path="*" 
-          element={<Navigate to={isAuthenticated ? "/businesses" : "/login"} />} 
-        />
-      </Routes>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Public routes */}
+          <Route 
+            path="/login" 
+            element={!isAuthenticated ? (
+              <ErrorBoundary>
+                <Login />
+              </ErrorBoundary>
+            ) : <Navigate to="/businesses" />} 
+          />
+          <Route 
+            path="/register" 
+            element={!isAuthenticated ? (
+              <ErrorBoundary>
+                <Register />
+              </ErrorBoundary>
+            ) : <Navigate to="/businesses" />} 
+          />
+          
+          {/* Protected routes */}
+          <Route 
+            path="/businesses" 
+            element={isAuthenticated ? (
+              <ErrorBoundary>
+                <Businesses />
+              </ErrorBoundary>
+            ) : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/businesses/:businessId" 
+            element={isAuthenticated ? (
+              <ErrorBoundary>
+                <BusinessDetail />
+              </ErrorBoundary>
+            ) : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/checkout" 
+            element={isAuthenticated ? (
+              <ErrorBoundary>
+                <Checkout />
+              </ErrorBoundary>
+            ) : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/orders" 
+            element={isAuthenticated ? (
+              <ErrorBoundary>
+                <Orders />
+              </ErrorBoundary>
+            ) : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/businesses/:businessId/dashboard" 
+            element={isAuthenticated ? (
+              <ErrorBoundary>
+                <BusinessDashboard />
+              </ErrorBoundary>
+            ) : <Navigate to="/login" />} 
+          />
+          <Route 
+            path="/dashboard" 
+            element={isAuthenticated ? (
+              <ErrorBoundary>
+                <Dashboard />
+              </ErrorBoundary>
+            ) : <Navigate to="/login" />} 
+          />
+          
+          {/* Default redirect */}
+          <Route 
+            path="/" 
+            element={<Navigate to={isAuthenticated ? "/businesses" : "/login"} />} 
+          />
+          
+          {/* Catch all route */}
+          <Route 
+            path="*" 
+            element={<Navigate to={isAuthenticated ? "/businesses" : "/login"} />} 
+          />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

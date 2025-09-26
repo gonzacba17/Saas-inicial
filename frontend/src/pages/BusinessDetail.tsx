@@ -17,65 +17,37 @@ export const BusinessDetail: React.FC = () => {
   const { addItem, items, getItemCount } = useCartStore();
   const { user, logout } = useAuthStore();
 
-  // Mock data for now - will connect to API later
   useEffect(() => {
-    const mockBusiness: Business = {
-      id: businessId || '1',
-      name: 'Central Coffee',
-      description: 'Premium coffee experience in the heart of the city',
-      address: '123 Main St, Downtown',
-      business_type: 'restaurant',
+    const fetchBusinessData = async () => {
+      if (!businessId) return;
+      
+      setLoading(true);
+      try {
+        const [businessResponse, productsResponse] = await Promise.all([
+          apiService.getBusinessById(businessId),
+          apiService.getProductsByBusiness(businessId)
+        ]);
+        
+        setBusiness(businessResponse);
+        setProducts(productsResponse);
+      } catch (error) {
+        console.error('Error fetching business data:', error);
+        // Fallback to mock data on error
+        const mockBusiness: Business = {
+          id: businessId,
+          name: 'Central Coffee',
+          description: 'Premium coffee experience in the heart of the city',
+          address: '123 Main St, Downtown',
+          business_type: 'restaurant',
+        };
+        setBusiness(mockBusiness);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    const mockProducts: Product[] = [
-      {
-        id: '1',
-        name: 'Espresso',
-        description: 'Rich and bold espresso shot',
-        price: 3.50,
-        category: 'coffee',
-        business_id: businessId || '1',
-      },
-      {
-        id: '2',
-        name: 'Cappuccino',
-        description: 'Espresso with steamed milk and foam',
-        price: 4.50,
-        category: 'coffee',
-        business_id: businessId || '1',
-      },
-      {
-        id: '3',
-        name: 'Croissant',
-        description: 'Buttery, flaky pastry',
-        price: 3.00,
-        category: 'pastry',
-        business_id: businessId || '1',
-      },
-      {
-        id: '4',
-        name: 'Avocado Toast',
-        description: 'Fresh avocado on artisan bread',
-        price: 8.50,
-        category: 'food',
-        business_id: businessId || '1',
-      },
-      {
-        id: '5',
-        name: 'Latte',
-        description: 'Smooth espresso with steamed milk',
-        price: 4.75,
-        category: 'coffee',
-        business_id: businessId || '1',
-      },
-    ];
-
-    // Simulate API call
-    setTimeout(() => {
-      setBusiness(mockBusiness);
-      setProducts(mockProducts);
-      setLoading(false);
-    }, 1000);
+    fetchBusinessData();
   }, [businessId]);
 
   const categories = ['all', ...Array.from(new Set(products.map(p => p.category)))];

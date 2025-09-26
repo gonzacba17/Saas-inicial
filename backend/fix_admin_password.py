@@ -33,7 +33,7 @@ def fix_admin_password():
         print(f"✅ Admin user found: {admin.email}")
         
         # Generate new password hash
-        new_password = "Admin1234!"
+        new_password = os.getenv("ADMIN_PASSWORD", "Admin1234!")
         new_hash = get_password_hash(new_password)
         
         # Test that the new hash works
