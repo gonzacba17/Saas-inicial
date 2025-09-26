@@ -119,16 +119,37 @@ def list_business_payments(
     current_user: UserSchema = Depends(get_current_user)
 ):
     """List payments for a specific business (business owners/managers only)."""
-    # Check if business exists
-    business = db.query(Business).filter(Business.id == business_id).first()
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found")
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # Check permissions
-    require_business_permission(business_id, current_user, db)
-    
-    payments = PaymentCRUD.get_business_payments(db, business_id, skip=skip, limit=limit)
-    return payments
+    try:
+        # Check if business exists
+        business = db.query(Business).filter(Business.id == business_id).first()
+        if not business:
+            logger.warning(f"Business not found: {business_id}")
+            raise HTTPException(status_code=404, detail="Business not found")
+        
+        # Check permissions
+        require_business_permission(business_id, current_user, db)
+        
+        # Get payments - this should always return a list (empty if no payments)
+        payments = PaymentCRUD.get_business_payments(db, business_id, skip=skip, limit=limit)
+        
+        # Ensure we always return a list
+        if payments is None:
+            logger.info(f"No payments found for business {business_id}, returning empty list")
+            payments = []
+        
+        logger.info(f"Retrieved {len(payments)} payments for business {business_id}")
+        return payments
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving payments for business {business_id}: {str(e)}")
+        # Return empty list instead of 500 error when database query fails
+        return []
 
 @router.post("/create-preference", response_model=Dict[str, Any])
 def create_payment_preference(

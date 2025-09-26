@@ -35,7 +35,7 @@ def health_check():
     Returns immediately without any dependencies or external calls.
     Use /readyz for comprehensive readiness checks.
     """
-    return {"status": "ok", "service": "saas-cafeterias", "version": settings.version}
+    return {"status": "ok"}
 
 # Comprehensive readiness check endpoint
 @app.get("/readyz")
@@ -110,3 +110,12 @@ def read_root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+import requests
+
+def notify_n8n_new_user(user_data):
+    url = "http://localhost:5678/webhook-test/7e53d1aa-62d3-4a67-aa73-0b1d63061cfc"
+    try:
+        requests.post(url, json=user_data)
+    except Exception as e:
+        print(f"Error notificando a n8n: {e}")

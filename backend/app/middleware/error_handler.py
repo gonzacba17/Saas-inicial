@@ -33,6 +33,10 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         """Procesar request con manejo de errores"""
+        # Skip error handling overhead for ultra-fast health endpoints
+        if request.url.path in ["/health", "/readyz"]:
+            return await call_next(request)
+            
         error_id = str(uuid.uuid4())[:8]
         
         try:

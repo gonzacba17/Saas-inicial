@@ -120,6 +120,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to responses."""
     
     async def dispatch(self, request: Request, call_next):
+        # Skip security headers for ultra-fast health endpoints
+        if request.url.path in ["/health", "/readyz"]:
+            return await call_next(request)
+            
         response = await call_next(request)
         
         # Add security headers
