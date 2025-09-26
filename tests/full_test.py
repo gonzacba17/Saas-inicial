@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 @dataclass
-class TestData:
+class SharedTestData:
     """Almacena datos compartidos entre tests."""
     admin_token: Optional[str] = None
     user_token: Optional[str] = None
@@ -40,7 +40,7 @@ class TestData:
     order_id: Optional[str] = None
     base_url: str = "http://localhost:8000"
 
-class TestStatus(Enum):
+class TestExecutionStatus(Enum):
     """Estados de test para tracking."""
     PENDING = "pending"
     RUNNING = "running"
@@ -52,7 +52,7 @@ class TestStatus(Enum):
 class StepResult:
     """Resultado de cada paso del test."""
     step_name: str
-    status: TestStatus
+    status: TestExecutionStatus
     duration: float
     details: str
     error: Optional[str] = None
@@ -64,7 +64,7 @@ class StepResult:
 @pytest.fixture(scope="module")
 def shared_data():
     """Fixture que proporciona datos compartidos entre todos los tests."""
-    return TestData()
+    return SharedTestData()
 
 # ============================================================================
 # TEST PRINCIPAL DE INTEGRACIÓN COMPLETA
@@ -73,7 +73,7 @@ def shared_data():
 class TestFullIntegrationFlow:
     """Suite de tests de integración completa siguiendo flujo lógico."""
     
-    def test_full_integration_flow(self, shared_data: TestData):
+    def test_full_integration_flow(self, shared_data: SharedTestData):
         """
         Test principal que ejecuta flujo completo de integración:
         auth → roles → businesses → orders → payments → performance → security
@@ -85,37 +85,37 @@ class TestFullIntegrationFlow:
         # Paso 1: Tests de Autenticación
         auth_result = self._test_authentication_flow(shared_data)
         results.append(auth_result)
-        assert auth_result.status == TestStatus.PASSED, f"Auth failed: {auth_result.error}"
+        assert auth_result.status == TestExecutionStatus.PASSED, f"Auth failed: {auth_result.error}"
         
         # Paso 2: Tests de Roles y Permisos  
         roles_result = self._test_roles_and_permissions(shared_data)
         results.append(roles_result)
-        assert roles_result.status == TestStatus.PASSED, f"Roles failed: {roles_result.error}"
+        assert roles_result.status == TestExecutionStatus.PASSED, f"Roles failed: {roles_result.error}"
         
         # Paso 3: Tests de Businesses (CRUD)
         business_result = self._test_business_operations(shared_data)
         results.append(business_result)
-        assert business_result.status == TestStatus.PASSED, f"Business failed: {business_result.error}"
+        assert business_result.status == TestExecutionStatus.PASSED, f"Business failed: {business_result.error}"
         
         # Paso 4: Tests de Orders
         orders_result = self._test_order_operations(shared_data)
         results.append(orders_result)
-        assert orders_result.status == TestStatus.PASSED, f"Orders failed: {orders_result.error}"
+        assert orders_result.status == TestExecutionStatus.PASSED, f"Orders failed: {orders_result.error}"
         
         # Paso 5: Tests de Payments
         payments_result = self._test_payment_operations(shared_data)
         results.append(payments_result)
-        assert payments_result.status == TestStatus.PASSED, f"Payments failed: {payments_result.error}"
+        assert payments_result.status == TestExecutionStatus.PASSED, f"Payments failed: {payments_result.error}"
         
         # Paso 6: Tests de Performance
         performance_result = self._test_performance_metrics(shared_data)
         results.append(performance_result)
-        assert performance_result.status == TestStatus.PASSED, f"Performance failed: {performance_result.error}"
+        assert performance_result.status == TestExecutionStatus.PASSED, f"Performance failed: {performance_result.error}"
         
         # Paso 7: Tests de Seguridad
         security_result = self._test_security_validations(shared_data)
         results.append(security_result)
-        assert security_result.status == TestStatus.PASSED, f"Security failed: {security_result.error}"
+        assert security_result.status == TestExecutionStatus.PASSED, f"Security failed: {security_result.error}"
         
         # Reporte final
         self._generate_integration_report(results)
@@ -125,7 +125,7 @@ class TestFullIntegrationFlow:
     # PASO 1: AUTENTICACIÓN
     # ========================================================================
     
-    def _test_authentication_flow(self, data: TestData) -> StepResult:
+    def _test_authentication_flow(self, data: SharedTestData) -> StepResult:
         """Test completo de autenticación: registro, login, JWT validation."""
         start_time = time.time()
         
@@ -175,20 +175,20 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             return StepResult(
                 "Authentication Flow",
-                TestStatus.PASSED,
+                TestExecutionStatus.PASSED,
                 duration,
                 f"User registered, logged in, admin auth OK. Tokens: user={len(data.user_token)}c, admin={len(data.admin_token)}c"
             )
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Authentication Flow", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Authentication Flow", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # PASO 2: ROLES Y PERMISOS
     # ========================================================================
     
-    def _test_roles_and_permissions(self, data: TestData) -> StepResult:
+    def _test_roles_and_permissions(self, data: SharedTestData) -> StepResult:
         """Test de sistema de roles y control de acceso."""
         start_time = time.time()
         
@@ -216,20 +216,20 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             return StepResult(
                 "Roles and Permissions",
-                TestStatus.PASSED,
+                TestExecutionStatus.PASSED,
                 duration,
                 f"Role-based access control working. Admin role: {admin_info.get('role')}"
             )
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Roles and Permissions", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Roles and Permissions", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # PASO 3: BUSINESS OPERATIONS (CRUD)
     # ========================================================================
     
-    def _test_business_operations(self, data: TestData) -> StepResult:
+    def _test_business_operations(self, data: SharedTestData) -> StepResult:
         """Test completo de operaciones CRUD para businesses."""
         start_time = time.time()
         
@@ -276,20 +276,20 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             return StepResult(
                 "Business Operations",
-                TestStatus.PASSED,
+                TestExecutionStatus.PASSED,
                 duration,
                 f"CRUD complete. Business ID: {data.business_id}, operations: Create/Read/Update/List"
             )
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Business Operations", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Business Operations", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # PASO 4: ORDER OPERATIONS
     # ========================================================================
     
-    def _test_order_operations(self, data: TestData) -> StepResult:
+    def _test_order_operations(self, data: SharedTestData) -> StepResult:
         """Test de operaciones de pedidos."""
         start_time = time.time()
         
@@ -341,20 +341,20 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             return StepResult(
                 "Order Operations", 
-                TestStatus.PASSED,
+                TestExecutionStatus.PASSED,
                 duration,
                 f"Order created and read. Order ID: {data.order_id}, Product ID: {data.product_id}"
             )
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Order Operations", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Order Operations", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # PASO 5: PAYMENT OPERATIONS
     # ========================================================================
     
-    def _test_payment_operations(self, data: TestData) -> StepResult:
+    def _test_payment_operations(self, data: SharedTestData) -> StepResult:
         """Test de operaciones de pagos (sin MercadoPago real)."""
         start_time = time.time()
         
@@ -394,20 +394,20 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             return StepResult(
                 "Payment Operations",
-                TestStatus.PASSED, 
+                TestExecutionStatus.PASSED, 
                 duration,
                 f"{payment_result}. Endpoints responsive."
             )
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Payment Operations", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Payment Operations", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # PASO 6: PERFORMANCE METRICS
     # ========================================================================
     
-    def _test_performance_metrics(self, data: TestData) -> StepResult:
+    def _test_performance_metrics(self, data: SharedTestData) -> StepResult:
         """Test de métricas de performance en endpoints críticos."""
         start_time = time.time()
         
@@ -455,17 +455,17 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             details = f"Avg: {avg_time:.2f}ms, Slow: {len(slow_endpoints)}/{len(performance_results)}"
             
-            return StepResult("Performance Metrics", TestStatus.PASSED, duration, details)
+            return StepResult("Performance Metrics", TestExecutionStatus.PASSED, duration, details)
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Performance Metrics", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Performance Metrics", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # PASO 7: SECURITY VALIDATIONS
     # ========================================================================
     
-    def _test_security_validations(self, data: TestData) -> StepResult:
+    def _test_security_validations(self, data: SharedTestData) -> StepResult:
         """Test de validaciones de seguridad críticas."""
         start_time = time.time()
         
@@ -513,14 +513,14 @@ class TestFullIntegrationFlow:
             duration = time.time() - start_time
             return StepResult(
                 "Security Validations",
-                TestStatus.PASSED,
+                TestExecutionStatus.PASSED,
                 duration,
                 f"{len(security_checks)} security checks passed"
             )
             
         except Exception as e:
             duration = time.time() - start_time
-            return StepResult("Security Validations", TestStatus.FAILED, duration, "", str(e))
+            return StepResult("Security Validations", TestExecutionStatus.FAILED, duration, "", str(e))
 
     # ========================================================================
     # REPORTE FINAL
@@ -534,7 +534,7 @@ class TestFullIntegrationFlow:
         logger.info("="*80)
         
         total_duration = sum(r.duration for r in results)
-        passed_count = len([r for r in results if r.status == TestStatus.PASSED])
+        passed_count = len([r for r in results if r.status == TestExecutionStatus.PASSED])
         
         logger.info(f"✅ Total Steps: {len(results)}")
         logger.info(f"✅ Passed: {passed_count}/{len(results)}")
@@ -542,7 +542,7 @@ class TestFullIntegrationFlow:
         logger.info("")
         
         for i, result in enumerate(results, 1):
-            status_icon = "✅" if result.status == TestStatus.PASSED else "❌"
+            status_icon = "✅" if result.status == TestExecutionStatus.PASSED else "❌"
             logger.info(f"{i}. {status_icon} {result.step_name}")
             logger.info(f"   Duration: {result.duration:.2f}s")
             logger.info(f"   Details: {result.details}")

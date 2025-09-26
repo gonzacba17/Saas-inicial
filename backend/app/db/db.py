@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, Column, String, Boolean, DateTime, Text, I
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
 # Custom UUID type that works with both PostgreSQL and SQLite

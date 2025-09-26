@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -7,12 +8,21 @@ from app.middleware.security import setup_security_middleware
 from app.middleware.error_handler import setup_error_handlers
 from app.db.db import create_tables, get_db
 
+# Create lifespan event handler  
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    create_tables()
+    yield
+    # Shutdown (if needed)
+
 app = FastAPI(
     title=settings.project_name,
     version=settings.version,
     openapi_url=f"{settings.api_v1_str}/openapi.json",
     debug=settings.debug,
     description="🚀 Cafeteria IA - Sistema SaaS completo para gestión de cafeterías",
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
 )
@@ -53,10 +63,6 @@ setup_security_middleware(app)
 # Include API routes
 app.include_router(api.api_router, prefix=settings.api_v1_str)
 
-# Create database tables on startup
-@app.on_event("startup")
-async def startup_event():
-    create_tables()
 
 @app.get("/")
 def read_root():
