@@ -1,4 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from pydantic.settings import SettingsConfigDict
 from typing import Optional
 import os
 
