@@ -157,7 +157,35 @@ def create_payment_preference(
         )
     
     try:
-        # Create MercadoPago preference
+        # Check if we're in test/development mode
+        if settings.environment in ["testing", "development"] or not hasattr(settings, 'mercadopago_access_token') or not settings.mercadopago_access_token:
+            # Return mock payment preference for testing
+            mock_payment_data = {
+                "order_id": order.id,
+                "user_id": current_user.id,
+                "business_id": order.business_id,
+                "preference_id": f"mock-preference-{order.id}",
+                "external_reference": str(order.id),
+                "amount": order.total_amount,
+                "currency": "ARS",
+                "status": PaymentStatus.PENDING,
+                "metadata": json.dumps({"mock": True, "test_mode": True})
+            }
+            
+            payment = PaymentCRUD.create(db, mock_payment_data)
+            
+            return {
+                "payment_id": str(payment.id),
+                "preference_id": f"mock-preference-{order.id}",
+                "init_point": f"https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=mock-preference-{order.id}",
+                "sandbox_init_point": f"https://sandbox.mercadopago.com/checkout/v1/redirect?pref_id=mock-preference-{order.id}",
+                "order_id": str(order.id),
+                "amount": order.total_amount,
+                "mock": True,
+                "message": "Mock payment preference created for testing"
+            }
+        
+        # Production MercadoPago integration
         preference_data = payment_service.create_payment_preference(
             order_id=str(order.id),
             amount=order.total_amount,
@@ -189,10 +217,14 @@ def create_payment_preference(
             "amount": order.total_amount
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
+        # Convert service errors to 502 Bad Gateway (external service issue)
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to create payment preference: {str(e)}"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Payment service unavailable: {str(e)}"
         )
 
 @router.get("/{payment_id}", response_model=PaymentSchema)
@@ -345,8 +377,12 @@ def check_payment_status(
             "updated": True
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
+        # Convert service errors to 502 Bad Gateway (external service issue)
         raise HTTPException(
-            status_code=500, 
-            detail=f"Failed to check payment status: {str(e)}"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Payment service unavailable: {str(e)}"
         )

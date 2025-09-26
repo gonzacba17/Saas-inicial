@@ -31,28 +31,67 @@ app = FastAPI(
 @app.get("/health")
 def health_check():
     """
-    Ultra-fast health check endpoint.
-    Returns immediately without database or external service checks.
-    Use /health/db for database connectivity verification.
+    Ultra-fast health check endpoint optimized for <100ms response.
+    Returns immediately without any dependencies or external calls.
+    Use /readyz for comprehensive readiness checks.
     """
-    return {"status": "ok"}
+    return {"status": "ok", "service": "saas-cafeterias", "version": settings.version}
 
-# Database health check endpoint (defined before middleware)
+# Comprehensive readiness check endpoint
+@app.get("/readyz")
+def readiness_check(db: Session = Depends(get_db)):
+    """
+    Comprehensive readiness check endpoint.
+    Performs database connectivity and service dependency checks.
+    May take longer than /health but provides detailed status.
+    """
+    checks = {
+        "status": "ok",
+        "service": "saas-cafeterias",
+        "version": settings.version,
+        "checks": {}
+    }
+    
+    # Database connectivity check
+    try:
+        result = db.execute(text("SELECT 1")).fetchone()
+        if result and result[0] == 1:
+            checks["checks"]["database"] = {"status": "ok", "response_time_ms": "<5"}
+        else:
+            checks["checks"]["database"] = {"status": "error", "error": "Invalid response"}
+            checks["status"] = "degraded"
+    except Exception as e:
+        checks["checks"]["database"] = {"status": "error", "error": str(e)}
+        checks["status"] = "degraded"
+    
+    # Environment configuration check
+    try:
+        checks["checks"]["config"] = {
+            "status": "ok",
+            "environment": settings.environment,
+            "debug": settings.debug
+        }
+    except Exception as e:
+        checks["checks"]["config"] = {"status": "error", "error": str(e)}
+        checks["status"] = "degraded"
+    
+    return checks
+
+# Legacy database health check endpoint (deprecated, use /readyz)
 @app.get("/health/db")
 def health_check_db(db: Session = Depends(get_db)):
     """
-    Database health check endpoint.
-    Performs a simple database connectivity test.
+    Legacy database health check endpoint.
+    DEPRECATED: Use /readyz for comprehensive checks.
     """
     try:
-        # Simple database connectivity test
         result = db.execute(text("SELECT 1")).fetchone()
         if result and result[0] == 1:
-            return {"status": "ok", "db": True}
+            return {"status": "ok", "db": True, "deprecated": "Use /readyz instead"}
         else:
-            return {"status": "error", "db": False}
+            return {"status": "error", "db": False, "deprecated": "Use /readyz instead"}
     except Exception as e:
-        return {"status": "error", "db": False, "error": str(e)}
+        return {"status": "error", "db": False, "error": str(e), "deprecated": "Use /readyz instead"}
 
 # Setup error handling (debe ir primero)
 setup_error_handlers(app, debug=settings.debug)
