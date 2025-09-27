@@ -1,7 +1,31 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-# ELIMINAR ESTA LÍNEA: from pydantic.settings import SettingsConfigDict
 from typing import Optional
 import os
+from pathlib import Path
+
+# Ensure .env file is loaded explicitly
+try:
+    from dotenv import load_dotenv
+    # Load .env from multiple possible locations
+    env_paths = [
+        Path(".env"),
+        Path("../.env"),
+        Path("../../.env"),
+        Path(__file__).parent.parent.parent / ".env"
+    ]
+    
+    for env_path in env_paths:
+        if env_path.exists():
+            load_dotenv(env_path, encoding='utf-8')
+            print(f"Loaded environment file: {env_path.absolute()}")
+            break
+    else:
+        print("No .env file found in expected locations")
+        
+except ImportError:
+    print("python-dotenv not installed, relying on system environment variables")
+except Exception as e:
+    print(f"Error loading .env file: {e}")
 
 
 class Settings(BaseSettings):
@@ -35,28 +59,66 @@ class Settings(BaseSettings):
     postgres_user: str = os.getenv("POSTGRES_USER", "postgres")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "postgres")
     postgres_host: str = os.getenv("POSTGRES_HOST", "localhost")
-    postgres_port: int = int(os.getenv("POSTGRES_PORT", "5432"))
+    postgres_port: int = int(os.getenv("POSTGRES_PORT") or "5432")
     postgres_db: str = os.getenv("POSTGRES_DB", "saas_db")
 
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS SQLITE (DESARROLLO)
     # ==============================================
-    sqlite_file: str = "saas_cafeterias.db"
+    sqlite_file: str = os.getenv("SQLITE_FILE", "saas_cafeterias_local.db")
 
     # Direct DATABASE_URL support
     database_url: Optional[str] = None
     
     @property
     def db_url(self) -> str:
-        """Construye la URL de conexión a la base de datos"""
+        """Construye la URL de conexión a la base de datos con manejo de encoding UTF-8"""
         # Use DATABASE_URL if provided in environment
         if self.database_url:
-            return self.database_url
+            # Ensure the provided DATABASE_URL has proper encoding
+            return self._ensure_utf8_encoding(self.database_url)
+        
         # Verificar si PostgreSQL está disponible, sino usar SQLite
         if os.getenv("USE_SQLITE", "false").lower() == "true":
             return f"sqlite:///./{self.sqlite_file}"
         else:
-            # Configuración para PostgreSQL (roadmap objetivo)
+            # Configuración para PostgreSQL con encoding UTF-8 completo
+            return self._build_postgres_url()
+    
+    def _ensure_utf8_encoding(self, url: str) -> str:
+        """Ensure database URL has proper UTF-8 encoding parameters."""
+        if url.startswith('postgresql'):
+            # Add UTF-8 encoding parameters if not present
+            if 'client_encoding=utf8' not in url:
+                separator = '&' if '?' in url else '?'
+                url += f"{separator}client_encoding=utf8"
+        return url
+    
+    def _build_postgres_url(self) -> str:
+        """Build PostgreSQL URL with proper encoding and error handling."""
+        from urllib.parse import quote_plus
+        import logging
+        
+        try:
+            # URL encode all components to handle special characters
+            encoded_user = quote_plus(str(self.postgres_user))
+            encoded_password = quote_plus(str(self.postgres_password))
+            encoded_host = quote_plus(str(self.postgres_host))
+            encoded_db = quote_plus(str(self.postgres_db))
+            
+            # Build URL with UTF-8 encoding parameters
+            base_url = f"postgresql://{encoded_user}:{encoded_password}@{encoded_host}:{self.postgres_port}/{encoded_db}"
+            
+            # Add UTF-8 specific parameters (PostgreSQL specific)
+            url = f"{base_url}?client_encoding=utf8"
+            
+            return url
+            
+        except Exception as e:
+            logging.error(f"Error building PostgreSQL URL: {str(e)}")
+            logging.error("Check that all database credentials are properly set and don't contain invalid characters")
+            
+            # Fallback to basic URL without encoding if there's an issue
             return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
     # ==============================================
@@ -94,6 +156,11 @@ class Settings(BaseSettings):
     rate_limit_period: int = 3600  # 1 hour
     enable_https_redirect: bool = False
     trusted_proxies: str = "127.0.0.1,::1"
+    
+    # ==============================================
+    # CONFIGURACIÓN DE TESTING
+    # ==============================================
+    testing: bool = os.getenv("TESTING", "false").lower() == "true"
 
     # ==============================================
     # APIs EXTERNAS (OPCIONAL)

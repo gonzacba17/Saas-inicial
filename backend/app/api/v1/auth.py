@@ -119,24 +119,35 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Authenticate user and return JWT token."""
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
+    try:
+        user = authenticate_user(db, form_data.username, form_data.password)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
+        access_token = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
+        )
+        return {
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "user_id": str(user.id),
+            "role": user.role.value if hasattr(user.role, 'value') else str(user.role)
+        }
+    except HTTPException:
+        # Re-raise HTTPExceptions (including inactive user) as-is
+        raise
+    except Exception as e:
+        # For any other unexpected error, return invalid credentials
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer",
-        "user_id": str(user.id),
-        "role": user.role.value if hasattr(user.role, 'value') else str(user.role)
-    }
 
 @router.post("/refresh", response_model=Token)
 def refresh_token(current_user: UserSchema = Depends(get_current_user)):

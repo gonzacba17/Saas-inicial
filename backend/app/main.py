@@ -28,18 +28,22 @@ app = FastAPI(
 )
 
 # Ultra-fast health check endpoint (defined before middleware for maximum speed)
+# Cached response for even faster performance
+_HEALTH_RESPONSE = {"status": "ok"}
+
 @app.get("/health")
 def health_check():
     """
     Ultra-fast health check endpoint optimized for <100ms response.
     Returns immediately without any dependencies or external calls.
+    Uses cached response for maximum performance.
     Use /readyz for comprehensive readiness checks.
     """
-    return {"status": "ok"}
+    return _HEALTH_RESPONSE
 
 # Comprehensive readiness check endpoint
 @app.get("/readyz")
-def readiness_check(db: Session = Depends(get_db)):
+def readiness_check():
     """
     Comprehensive readiness check endpoint.
     Performs database connectivity and service dependency checks.
@@ -54,12 +58,23 @@ def readiness_check(db: Session = Depends(get_db)):
     
     # Database connectivity check
     try:
-        result = db.execute(text("SELECT 1")).fetchone()
-        if result and result[0] == 1:
-            checks["checks"]["database"] = {"status": "ok", "response_time_ms": "<5"}
-        else:
-            checks["checks"]["database"] = {"status": "error", "error": "Invalid response"}
-            checks["status"] = "degraded"
+        # Get database connection manually for better error handling
+        from app.db.db import get_db
+        db_gen = get_db()
+        db = next(db_gen)
+        try:
+            result = db.execute(text("SELECT 1")).fetchone()
+            if result and result[0] == 1:
+                checks["checks"]["database"] = {"status": "ok", "response_time_ms": "<5"}
+            else:
+                checks["checks"]["database"] = {"status": "error", "error": "Invalid response"}
+                checks["status"] = "degraded"
+        finally:
+            # Always close the database connection
+            try:
+                next(db_gen, None)
+            except StopIteration:
+                pass
     except Exception as e:
         checks["checks"]["database"] = {"status": "error", "error": str(e)}
         checks["status"] = "degraded"
@@ -79,17 +94,28 @@ def readiness_check(db: Session = Depends(get_db)):
 
 # Legacy database health check endpoint (deprecated, use /readyz)
 @app.get("/health/db")
-def health_check_db(db: Session = Depends(get_db)):
+def health_check_db():
     """
     Legacy database health check endpoint.
     DEPRECATED: Use /readyz for comprehensive checks.
     """
     try:
-        result = db.execute(text("SELECT 1")).fetchone()
-        if result and result[0] == 1:
-            return {"status": "ok", "db": True, "deprecated": "Use /readyz instead"}
-        else:
-            return {"status": "error", "db": False, "deprecated": "Use /readyz instead"}
+        # Get database connection manually for better error handling
+        from app.db.db import get_db
+        db_gen = get_db()
+        db = next(db_gen)
+        try:
+            result = db.execute(text("SELECT 1")).fetchone()
+            if result and result[0] == 1:
+                return {"status": "ok", "db": True, "deprecated": "Use /readyz instead"}
+            else:
+                return {"status": "error", "db": False, "deprecated": "Use /readyz instead"}
+        finally:
+            # Always close the database connection
+            try:
+                next(db_gen, None)
+            except StopIteration:
+                pass
     except Exception as e:
         return {"status": "error", "db": False, "error": str(e), "deprecated": "Use /readyz instead"}
 

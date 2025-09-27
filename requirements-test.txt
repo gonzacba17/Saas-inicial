@@ -1,0 +1,55 @@
+# =================================================
+# TEST DEPENDENCIES - COMPREHENSIVE TESTING SUITE
+# =================================================
+
+# Core testing framework
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.0.0
+pytest-mock>=3.12.0
+pytest-timeout>=2.2.0
+pytest-xdist>=3.5.0
+pytest-html>=4.1.0
+pytest-json-report>=1.5.0
+
+# FastAPI testing
+httpx>=0.25.0
+starlette[testing]>=0.27.0
+asgi-lifespan>=2.1.0
+
+# Database testing
+pytest-postgresql>=5.0.0
+sqlalchemy-utils>=0.41.0
+factory-boy>=3.3.0
+faker>=20.0.0
+
+# Security testing
+pytest-security>=1.0.0
+bandit>=1.7.5
+
+# Performance testing
+pytest-benchmark>=4.0.0
+locust>=2.17.0
+
+# API testing
+requests>=2.31.0
+responses>=0.24.0
+
+# Validation testing
+hypothesis>=6.88.0
+pydantic>=2.5.0
+
+# Mock and fixtures
+responses>=0.24.0
+freezegun>=1.2.0
+time-machine>=2.13.0
+
+# Load testing
+aiofiles>=23.2.0
+aiohttp>=3.9.0
+
+# Additional utilities
+coverage>=7.3.0
+pytest-clarity>=1.0.1
+pytest-sugar>=0.9.7
+pytest-emoji>=0.2.0

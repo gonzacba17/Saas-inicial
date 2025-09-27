@@ -34,10 +34,11 @@ class InputSanitizer:
     
     # Dangerous patterns to block
     SQL_INJECTION_PATTERNS = [
-        r"(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)",
-        r"(--|\#|\/\*|\*\/)",
-        r"(\b(OR|AND)\s+\d+\s*=\s*\d+)",
-        r"(\'\s*(OR|AND)\s+\'\d+\'\s*=\s*\'\d+\')",
+        r"(\b(SELECT|INSERT|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\s+\w)",  # SQL keywords followed by parameters
+        r"(\bUPDATE\s+\w+\s+SET\b)",  # UPDATE statements with SET clause
+        r"(--|\#|\/\*|\*\/)",  # SQL comments
+        r"(\b(OR|AND)\s+\d+\s*=\s*\d+)",  # Boolean logic injections
+        r"(\'\s*(OR|AND)\s+\'\d+\'\s*=\s*\'\d+\')",  # String-based injections
     ]
     
     XSS_PATTERNS = [
@@ -234,6 +235,11 @@ class ValidationMiddleware:
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
             request = Request(scope, receive)
+            
+            # Skip validation for health checks (ultra-fast path)
+            if request.url.path.startswith("/health") or request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+                await self.app(scope, receive, send)
+                return
             
             # Validate request size
             content_length = request.headers.get("content-length")

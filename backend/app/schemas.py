@@ -102,6 +102,34 @@ class BusinessBase(BaseModel):
     phone: Optional[str] = None
     email: Optional[str] = None
     business_type: Optional[str] = "general"
+    
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        """Validate and sanitize business name."""
+        if not v or not v.strip():
+            from fastapi import HTTPException, status
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Business name is required and cannot be empty"
+            )
+        return InputSanitizer.sanitize_string(v, max_length=100)
+    
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v):
+        """Validate and sanitize business description."""
+        if v is not None:
+            return InputSanitizer.sanitize_string(v, max_length=500)
+        return v
+    
+    @field_validator('address')
+    @classmethod
+    def validate_address(cls, v):
+        """Validate and sanitize business address."""
+        if v is not None:
+            return InputSanitizer.sanitize_string(v, max_length=200)
+        return v
 
 class BusinessCreate(BusinessBase):
     pass
@@ -114,6 +142,36 @@ class BusinessUpdate(BaseModel):
     email: Optional[str] = None
     business_type: Optional[str] = None
     is_active: Optional[bool] = None
+    
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        """Validate and sanitize business name."""
+        if v is not None:
+            if not v.strip():
+                from fastapi import HTTPException, status
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Business name cannot be empty"
+                )
+            return InputSanitizer.sanitize_string(v, max_length=100)
+        return v
+    
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v):
+        """Validate and sanitize business description."""
+        if v is not None:
+            return InputSanitizer.sanitize_string(v, max_length=500)
+        return v
+    
+    @field_validator('address')
+    @classmethod
+    def validate_address(cls, v):
+        """Validate and sanitize business address."""
+        if v is not None:
+            return InputSanitizer.sanitize_string(v, max_length=200)
+        return v
 
 class BusinessInDBBase(BusinessBase):
     id: UUID

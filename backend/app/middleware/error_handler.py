@@ -81,10 +81,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             
             return JSONResponse(
                 status_code=HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
-                    "error": "internal_server_error",
-                    "detail": error_detail
-                }
+                content={"detail": "Internal server error occurred"}
             )
 
 class ValidationErrorHandler:
@@ -225,43 +222,41 @@ def setup_error_handlers(app, debug: bool = False):
         """Manejar errores de validación Pydantic"""
         logger.warning(f"Validation error on {request.url}: {exc.detail}")
         
+        # Usar formato detail para consistencia con FastAPI
         return JSONResponse(
             status_code=422,
-            content=ValidationErrorHandler.format_validation_error({
-                'errors': exc.detail if hasattr(exc, 'detail') else []
-            })
+            content={"detail": exc.detail if hasattr(exc, 'detail') else "Validation error"}
         )
     
     # Manejador para errores 404
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc):
         """Manejar recursos no encontrados"""
+        detail = getattr(exc, 'detail', 'The requested resource was not found')
         return JSONResponse(
             status_code=404,
-            content={
-                "error": "not_found",
-                "message": "The requested resource was not found",
-                "path": str(request.url.path),
-                "timestamp": datetime.utcnow().isoformat()
-            }
+            content={"detail": detail}
         )
     
     # Manejador para errores 401 (no autenticado)
     @app.exception_handler(401)
     async def unauthorized_handler(request: Request, exc):
         """Manejar errores de autenticación"""
+        # Usar el detail de la excepción si está disponible, sino usar mensaje por defecto
+        detail = getattr(exc, 'detail', 'Could not validate credentials')
         return JSONResponse(
             status_code=401,
-            content=SecurityErrorHandler.handle_auth_error("invalid_credentials")
+            content={"detail": detail}
         )
     
     # Manejador para errores 403 (no autorizado)
     @app.exception_handler(403)
     async def forbidden_handler(request: Request, exc):
         """Manejar errores de autorización"""
+        detail = getattr(exc, 'detail', 'Insufficient permissions for this operation')
         return JSONResponse(
             status_code=403,
-            content=SecurityErrorHandler.handle_auth_error("insufficient_permissions")
+            content={"detail": detail}
         )
     
     logger.info("Error handlers configured successfully")

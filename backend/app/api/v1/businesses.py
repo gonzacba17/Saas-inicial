@@ -73,20 +73,21 @@ def create_business(
                 detail="Business name is required and cannot be empty"
             )
         
-        # Create business
+        # Create business and association in single transaction
         db_business = Business(**business.model_dump())
         db.add(db_business)
-        db.commit()
+        db.flush()  # Get the ID without committing
+        
+        # Create user-business association as owner in the same transaction
+        user_business = UserBusiness(
+            user_id=current_user.id,
+            business_id=db_business.id,
+            role=UserBusinessRole.owner
+        )
+        db.add(user_business)
+        db.commit()  # Commit both at once
+        
         db.refresh(db_business)
-        
-        # Create user-business association as owner
-        user_business_data = {
-            "user_id": current_user.id,
-            "business_id": db_business.id,
-            "role": UserBusinessRole.owner
-        }
-        UserBusinessCRUD.create(db, user_business_data)
-        
         return db_business
         
     except HTTPException:
@@ -103,6 +104,55 @@ def create_business(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error while creating business"
         )
+
+# ========================================
+# USER-BUSINESS RELATIONSHIP ENDPOINTS
+# ========================================
+
+@router.get("/user-businesses", response_model=List[UserBusinessSchema])
+def list_user_businesses(
+    db: Session = Depends(get_db), 
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get all businesses for current user."""
+    user_businesses = UserBusinessCRUD.get_user_businesses(db, current_user.id)
+    return user_businesses
+
+@router.post("/user-businesses", response_model=UserBusinessSchema)
+def create_user_business(
+    user_business: UserBusinessCreate, 
+    db: Session = Depends(get_db), 
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Associate current user with a business."""
+    # Check if business exists
+    business = db.query(Business).filter(Business.id == user_business.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    # Check if association already exists
+    existing = UserBusinessCRUD.get_by_user_and_business(db, current_user.id, user_business.business_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="User already associated with this business")
+    
+    user_business_data = user_business.model_dump()
+    user_business_data["user_id"] = current_user.id
+    
+    return UserBusinessCRUD.create(db, user_business_data)
+
+@router.delete("/user-businesses/{business_id}")
+def remove_user_business(
+    business_id: UUID, 
+    db: Session = Depends(get_db), 
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Remove current user association with a business."""
+    user_business = UserBusinessCRUD.get_by_user_and_business(db, current_user.id, business_id)
+    if not user_business:
+        raise HTTPException(status_code=404, detail="User business association not found")
+    
+    UserBusinessCRUD.delete(db, current_user.id, business_id)
+    return {"message": "User business association removed successfully"}
 
 @router.get("/{business_id}", response_model=BusinessSchema)
 def get_business(
@@ -203,52 +253,3 @@ def delete_business(
     business.is_active = False
     db.commit()
     return {"message": "Business deleted successfully"}
-
-# ========================================
-# USER-BUSINESS RELATIONSHIP ENDPOINTS
-# ========================================
-
-@router.get("/user-businesses", response_model=List[UserBusinessSchema])
-def list_user_businesses(
-    db: Session = Depends(get_db), 
-    current_user: UserSchema = Depends(get_current_user)
-):
-    """Get all businesses for current user."""
-    user_businesses = UserBusinessCRUD.get_user_businesses(db, current_user.id)
-    return user_businesses
-
-@router.post("/user-businesses", response_model=UserBusinessSchema)
-def create_user_business(
-    user_business: UserBusinessCreate, 
-    db: Session = Depends(get_db), 
-    current_user: UserSchema = Depends(get_current_user)
-):
-    """Associate current user with a business."""
-    # Check if business exists
-    business = db.query(Business).filter(Business.id == user_business.business_id).first()
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found")
-    
-    # Check if association already exists
-    existing = UserBusinessCRUD.get_by_user_and_business(db, current_user.id, user_business.business_id)
-    if existing:
-        raise HTTPException(status_code=400, detail="User already associated with this business")
-    
-    user_business_data = user_business.model_dump()
-    user_business_data["user_id"] = current_user.id
-    
-    return UserBusinessCRUD.create(db, user_business_data)
-
-@router.delete("/user-businesses/{business_id}")
-def remove_user_business(
-    business_id: UUID, 
-    db: Session = Depends(get_db), 
-    current_user: UserSchema = Depends(get_current_user)
-):
-    """Remove current user association with a business."""
-    user_business = UserBusinessCRUD.get_by_user_and_business(db, current_user.id, business_id)
-    if not user_business:
-        raise HTTPException(status_code=404, detail="User business association not found")
-    
-    UserBusinessCRUD.delete(db, current_user.id, business_id)
-    return {"message": "User business association removed successfully"}

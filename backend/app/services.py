@@ -72,6 +72,13 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
         return None
     if not verify_password(password, user.hashed_password):
         return None
+    # Check if user is active
+    if not user.is_active:
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user. Please contact support."
+        )
     return user
 
 def create_user(db: Session, user: UserCreate) -> User:

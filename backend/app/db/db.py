@@ -44,10 +44,196 @@ class GUID(TypeDecorator):
                 return uuid.UUID(value)
             return value
 
-# Database setup
-engine = create_engine(settings.db_url)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Database setup with proper UTF-8 encoding and logging
+import logging
+
+# Configure logging for database module
+logger = logging.getLogger(__name__)
+
+def create_database_engine():
+    """Create database engine with proper encoding, error handling, and fallback configuration."""
+    import os
+    import urllib.parse
+    from sqlalchemy import create_engine, text
+    
+    try:
+        # Load environment variables with fallbacks for your specific setup
+        postgres_user = os.getenv('POSTGRES_USER', 'postgresql')
+        postgres_password = os.getenv('POSTGRES_PASSWORD', 'mapuchito17')
+        postgres_host = os.getenv('POSTGRES_HOST', 'localhost')
+        postgres_port = os.getenv('POSTGRES_PORT', '5432')
+        postgres_db = os.getenv('POSTGRES_DB', 'testdb')
+        
+        # Log configuration (without exposing password)
+        logger.info(f"Database connection config: user={postgres_user}, host={postgres_host}, port={postgres_port}, db={postgres_db}")
+        
+        # Check if we should use SQLite fallback
+        use_sqlite = os.getenv('USE_SQLITE', 'false').lower() == 'true'
+        
+        if use_sqlite:
+            # SQLite fallback for development/testing
+            sqlite_file = os.getenv('SQLITE_FILE', 'saas_cafeterias.db')
+            db_url = f"sqlite:///./{sqlite_file}"
+            logger.info(f"Using SQLite database: {sqlite_file}")
+            
+            # Enhanced SQLite configuration for better concurrency support
+            connect_args = {
+                "check_same_thread": False,
+                "timeout": 30,  # Increased timeout for concurrent operations
+            }
+            
+            # Additional configuration for testing environment
+            testing = os.getenv('TESTING', 'false').lower() == 'true'
+            if testing:
+                connect_args.update({
+                    # WAL mode for better concurrency
+                    "isolation_level": None,  # Use autocommit for better concurrency
+                })
+            
+            engine = create_engine(
+                db_url,
+                connect_args=connect_args,
+                pool_size=30 if testing else 5,  # Increased pool size for tests
+                max_overflow=10 if testing else 10,
+                pool_pre_ping=True,
+                pool_recycle=300,
+                pool_timeout=30,  # Add pool timeout
+                echo=False
+            )
+            
+            # Configure SQLite for better concurrency in testing
+            if testing:
+                from sqlalchemy import event
+                
+                @event.listens_for(engine, "connect")
+                def set_sqlite_pragma(dbapi_connection, connection_record):
+                    cursor = dbapi_connection.cursor()
+                    # Enable WAL mode for better concurrency
+                    cursor.execute("PRAGMA journal_mode=WAL")
+                    # Optimize synchronous mode for testing
+                    cursor.execute("PRAGMA synchronous=NORMAL")
+                    # Increase timeout for busy operations
+                    cursor.execute("PRAGMA busy_timeout=30000")
+                    # Optimize cache size
+                    cursor.execute("PRAGMA cache_size=10000")
+                    cursor.close()
+        else:
+            # PostgreSQL configuration with proper UTF-8 handling
+            try:
+                # URL encode all components to handle special characters safely
+                encoded_user = urllib.parse.quote_plus(str(postgres_user))
+                encoded_password = urllib.parse.quote_plus(str(postgres_password))
+                encoded_host = urllib.parse.quote_plus(str(postgres_host))
+                encoded_db = urllib.parse.quote_plus(str(postgres_db))
+                
+                # Build PostgreSQL URL with UTF-8 encoding
+                db_url = f"postgresql://{encoded_user}:{encoded_password}@{encoded_host}:{postgres_port}/{encoded_db}?client_encoding=utf8"
+                
+                logger.info("Using PostgreSQL database with UTF-8 encoding")
+                
+                engine = create_engine(
+                    db_url,
+                    pool_pre_ping=True,
+                    pool_recycle=300,
+                    pool_size=5,
+                    max_overflow=10,
+                    echo=False,
+                    # Ensure UTF-8 encoding for PostgreSQL
+                    connect_args={
+                        "client_encoding": "utf8",
+                        "options": "-c client_encoding=utf8"
+                    }
+                )
+                
+            except Exception as encoding_error:
+                logger.error(f"Failed to build PostgreSQL URL: {encoding_error}")
+                # Fallback to basic URL without encoding
+                db_url = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
+                logger.warning("Falling back to unencoded URL - may cause issues with special characters")
+                
+                engine = create_engine(
+                    db_url,
+                    pool_pre_ping=True,
+                    pool_recycle=300,
+                    echo=False
+                )
+        
+        # Test connection to catch issues early
+        logger.info("Testing database connection...")
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1 as test"))
+            test_value = result.fetchone()[0]
+            logger.info(f"Database connection test successful: {test_value}")
+        
+        logger.info("Database engine created successfully")
+        return engine
+        
+    except UnicodeDecodeError as e:
+        logger.error(f"Unicode decode error: {str(e)}")
+        logger.error("This typically occurs when database credentials contain special characters.")
+        logger.error("Solutions:")
+        logger.error("1. Check your .env file for non-ASCII characters in POSTGRES_PASSWORD")
+        logger.error("2. Use URL encoding for special characters")
+        logger.error("3. Set USE_SQLITE=true to use SQLite fallback")
+        raise ConnectionError(f"Unicode encoding error in database connection: {str(e)}")
+        
+    except Exception as e:
+        logger.error(f"Database connection failed: {str(e)}")
+        
+        # Provide specific guidance based on error type
+        error_str = str(e).lower()
+        if "connection refused" in error_str:
+            logger.error("PostgreSQL server is not running or not accessible")
+            logger.error("Solutions:")
+            logger.error("1. Start PostgreSQL service")
+            logger.error("2. Check host and port configuration")
+            logger.error("3. Verify firewall settings")
+            logger.error("4. Use USE_SQLITE=true for local development")
+        elif "authentication failed" in error_str:
+            logger.error("Database authentication failed")
+            logger.error("Solutions:")
+            logger.error("1. Verify POSTGRES_USER and POSTGRES_PASSWORD")
+            logger.error("2. Check PostgreSQL user permissions")
+            logger.error("3. Ensure database exists")
+        elif "codec can't decode" in error_str or "invalid continuation byte" in error_str:
+            logger.error("Unicode encoding error detected")
+            logger.error("Solutions:")
+            logger.error("1. Check database credentials for special characters")
+            logger.error("2. Use URL encoding for passwords with special characters")
+            logger.error("3. Set environment variables properly")
+        
+        raise ConnectionError(f"Failed to connect to database: {str(e)}")
+
+# Database engine - created lazily to avoid connection issues during import
+_engine = None
 Base = declarative_base()
+
+def get_engine():
+    """Get database engine, creating it if necessary."""
+    global _engine
+    if _engine is None:
+        _engine = create_database_engine()
+    return _engine
+
+def get_sessionlocal():
+    """Get SessionLocal class, creating it if necessary."""
+    engine = get_engine()
+    return sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# For backward compatibility
+@property
+def engine():
+    return get_engine()
+
+# Create SessionLocal when needed
+SessionLocal = None
+
+def _get_session_class():
+    global SessionLocal
+    if SessionLocal is None:
+        engine = get_engine()
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return SessionLocal
 
 # ========================================
 # ENUMS
@@ -256,7 +442,8 @@ class Payment(Base):
 
 def get_db():
     """Database dependency for FastAPI endpoints."""
-    db = SessionLocal()
+    SessionLocalClass = _get_session_class()
+    db = SessionLocalClass()
     try:
         yield db
     finally:
@@ -264,6 +451,7 @@ def get_db():
 
 def create_tables():
     """Create all database tables."""
+    engine = get_engine()
     Base.metadata.create_all(bind=engine)
 
 # ========================================
@@ -815,3 +1003,4 @@ class PaymentCRUD:
         return db.query(Payment).filter(
             Payment.status == status
         ).order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()
+    

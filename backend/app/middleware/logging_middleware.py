@@ -26,6 +26,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         self.logger = logging.getLogger('request_middleware')
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Skip logging overhead for ultra-fast health endpoints
+        if request.url.path.startswith("/health") or request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+            return await call_next(request)
+        
         # Generate unique request ID
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id

@@ -21,6 +21,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.memory_store: Dict[str, Dict[str, float]] = {}
     
     async def dispatch(self, request: Request, call_next):
+        # Skip rate limiting in testing mode
+        if settings.testing:
+            return await call_next(request)
+            
         # Skip rate limiting for health checks and static files (ultra-fast path)
         if request.url.path.startswith("/health") or request.url.path in ["/docs", "/redoc", "/openapi.json"]:
             return await call_next(request)
@@ -120,8 +124,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to responses."""
     
     async def dispatch(self, request: Request, call_next):
-        # Skip security headers for ultra-fast health endpoints
-        if request.url.path in ["/health", "/readyz"]:
+        # Skip security headers in testing mode or for ultra-fast health endpoints
+        if settings.testing or request.url.path in ["/health", "/readyz"]:
             return await call_next(request)
             
         response = await call_next(request)
