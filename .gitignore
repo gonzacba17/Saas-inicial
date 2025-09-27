@@ -154,11 +154,21 @@ lerna-debug.log*
 ehthumbs.db
 Thumbs.db
 
-# Pytest / coverage
+# Testing artifacts (removed - no tests in production)
 .pytest_cache/
 htmlcov/
 .coverage
 .coverage.*
+pytest.ini
+pytest_report.*
+*test*.db
+
+# Development tools (removed)
+scripts/
+tests/
+test_venv/
+**/tests/
+**/__tests__/
 
 # Local AI configs
 .claude/
@@ -170,6 +180,15 @@ redis-data/
 *.env.docker
 docker-compose.override.yml
 
-# Backend logs
+# Backend logs and artifacts
 backend/*.log
-test_venv/
+backend/create_test_db.py
+backend/debug_db.py
+backend/fix_*.py
+backend/current_requirements.txt
+backend/requirements-dev.txt
+
+# Temporary files
+asd.json
+claude.bat
+setup_tests.ps1
