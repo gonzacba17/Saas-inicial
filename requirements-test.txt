@@ -53,3 +53,6 @@ coverage>=7.3.0
 pytest-clarity>=1.0.1
 pytest-sugar>=0.9.7
 pytest-emoji>=0.2.0
+
+# System monitoring
+psutil>=5.9.0

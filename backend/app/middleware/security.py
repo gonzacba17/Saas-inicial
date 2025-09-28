@@ -7,6 +7,8 @@ from typing import Dict, Optional
 from fastapi import Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
+from starlette.responses import Response as StarletteResponse
 from app.core.config import settings
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -140,6 +142,44 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         
         return response
 
+class PayloadSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware to limit request payload size."""
+    
+    def __init__(self, app, max_size: int = 512 * 1024):  # 512KB default  
+        super().__init__(app)
+        self.max_size = max_size
+    
+    async def dispatch(self, request: Request, call_next):
+        # Skip for health checks
+        if request.url.path.startswith("/health") or request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+            return await call_next(request)
+        
+        # Check Content-Length header
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                size = int(content_length)
+                if size > self.max_size:
+                    return StarletteResponse(
+                        content='{"detail": "Request entity too large"}',
+                        status_code=413,
+                        headers={"content-type": "application/json"}
+                    )
+            except ValueError:
+                pass
+        
+        # For requests without Content-Length, check body size by reading
+        if request.method in ["POST", "PUT", "PATCH"]:
+            body = await request.body()
+            if len(body) > self.max_size:
+                return StarletteResponse(
+                    content='{"detail": "Request entity too large"}',
+                    status_code=413,
+                    headers={"content-type": "application/json"}
+                )
+        
+        return await call_next(request)
+
 def setup_cors(app):
     """Setup CORS middleware."""
     origins = [
@@ -164,6 +204,13 @@ def setup_security_middleware(app):
     """Setup all security middleware."""
     # CORS
     setup_cors(app)
+    
+    # Payload size limit (should be first for early rejection)
+    app.add_middleware(PayloadSizeLimitMiddleware, max_size=512 * 1024)  # 512KB limit
+    
+    # Input validation (should be first for early rejection)
+    from app.middleware.validation import ValidationMiddleware
+    app.add_middleware(ValidationMiddleware)
     
     # Rate limiting
     app.add_middleware(RateLimitMiddleware, calls=100, period=3600)  # 100 requests per hour

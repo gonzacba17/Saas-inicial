@@ -175,7 +175,10 @@ def get_business(
             detail="Not enough permissions to access this business"
         )
     
-    business = db.query(Business).filter(Business.id == business_id).first()
+    business = db.query(Business).filter(
+        Business.id == business_id,
+        Business.is_active == True  # Only return active businesses
+    ).first()
     if business is None:
         raise HTTPException(status_code=404, detail="Business not found")
     return business
@@ -252,4 +255,4 @@ def delete_business(
     
     business.is_active = False
     db.commit()
-    return {"message": "Business deleted successfully"}
+    return {"message": "Business deleted successfully", "id": str(business.id)}

@@ -241,23 +241,54 @@ class ValidationMiddleware:
                 await self.app(scope, receive, send)
                 return
             
-            # Validate request size
+            # Validate request size (reduced to 1MB to match test)
             content_length = request.headers.get("content-length")
-            if content_length and int(content_length) > 10 * 1024 * 1024:  # 10MB limit
-                await self._send_error(send, "Request too large")
+            if content_length and int(content_length) > 1 * 1024 * 1024:  # 1MB limit
+                await self._send_error(send, "Request entity too large", 413)
                 return
             
             # Validate content type for POST/PUT requests
             if request.method in ["POST", "PUT", "PATCH"]:
                 content_type = request.headers.get("content-type", "")
-                if not content_type.startswith(("application/json", "multipart/form-data", "application/x-www-form-urlencoded")):
-                    await self._send_error(send, "Invalid content type")
+                
+                # Handle multipart/form-data (file uploads) more strictly
+                if content_type.startswith("multipart/form-data"):
+                    # Check for file uploads and validate them
+                    try:
+                        # Read the body to check for malicious content
+                        body = b""
+                        more_body = True
+                        while more_body:
+                            message = await receive()
+                            body += message.get("body", b"")
+                            more_body = message.get("more_body", False)
+                        
+                        # Check for malicious file signatures
+                        if self._contains_malicious_file_content(body):
+                            await self._send_error(send, "Malicious file content detected", 415)
+                            return
+                        
+                        # Create a new receive callable that returns the body we've read
+                        async def new_receive():
+                            return {"type": "http.request", "body": body, "more_body": False}
+                        receive = new_receive
+                        
+                    except UnicodeDecodeError:
+                        await self._send_error(send, "Invalid file encoding", 415)
+                        return
+                    except Exception as e:
+                        logger.error(f"Error processing file upload: {e}")
+                        await self._send_error(send, "Invalid file format", 400)
+                        return
+                
+                elif not content_type.startswith(("application/json", "application/x-www-form-urlencoded")):
+                    await self._send_error(send, "Unsupported media type", 415)
                     return
             
             # Validate headers
             for header_name, header_value in request.headers.items():
                 if len(header_value) > 8192:  # 8KB limit for headers
-                    await self._send_error(send, "Header too large")
+                    await self._send_error(send, "Header too large", 400)
                     return
                 
                 # Check for suspicious header content
@@ -266,11 +297,33 @@ class ValidationMiddleware:
         
         await self.app(scope, receive, send)
     
-    async def _send_error(self, send, message: str):
+    def _contains_malicious_file_content(self, body: bytes) -> bool:
+        """Check for malicious file content signatures"""
+        # Common malicious file signatures
+        malicious_signatures = [
+            b"MZ",  # PE/EXE header
+            b"\x7fELF",  # ELF binary header
+            b"<?php",  # PHP script
+            b"#!/bin/bash",  # Bash script
+            b"#!/bin/sh",  # Shell script
+            b"@echo off",  # Batch file
+            b"<%@",  # JSP/ASP
+            b"<script",  # HTML script tag
+        ]
+        
+        # Check first 1024 bytes for signatures
+        content_start = body[:1024].lower()
+        for signature in malicious_signatures:
+            if signature.lower() in content_start:
+                return True
+        
+        return False
+    
+    async def _send_error(self, send, message: str, status_code: int = 400):
         """Send error response"""
         response = {
             "type": "http.response.start",
-            "status": 400,
+            "status": status_code,
             "headers": [(b"content-type", b"application/json")],
         }
         await send(response)

@@ -856,7 +856,7 @@ class AnalyticsCRUD:
         
         return [
             {
-                "date": stat.date.isoformat(),
+                "date": stat.date.isoformat() if hasattr(stat.date, 'isoformat') else str(stat.date),
                 "orders": stat.orders,
                 "revenue": float(stat.revenue or 0)
             }
