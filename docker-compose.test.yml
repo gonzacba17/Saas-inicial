@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Integration Tests
+  test-db:
+    image: postgres:15-alpine
+    container_name: saas_test_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_TEST_DB:-saas_cafeterias_test}
+      POSTGRES_USER: ${POSTGRES_USER:-testuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-testpass}
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    ports:
+      - "${POSTGRES_TEST_PORT:-5433}:5432"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-testuser} -d ${POSTGRES_TEST_DB:-saas_cafeterias_test}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+
+  # Redis for Test Environment
+  test-redis:
+    image: redis:7-alpine
+    container_name: saas_test_redis
+    command: redis-server --appendonly no --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_TEST_PORT:-6380}:6379"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    tmpfs:
+      - /data
+
+  # FastAPI Backend for Integration Tests
+  test-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=testing
+    container_name: saas_test_backend
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-testuser}:${POSTGRES_PASSWORD:-testpass}@test-db:5432/${POSTGRES_TEST_DB:-saas_cafeterias_test}
+      - REDIS_URL=redis://test-redis:6379/0
+      - CELERY_BROKER_URL=redis://test-redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://test-redis:6379/2
+      - ENVIRONMENT=testing
+      - TESTING=true
+      - SECRET_KEY=test-secret-key-for-testing-only
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+    ports:
+      - "${BACKEND_TEST_PORT:-8001}:8000"
+    networks:
+      - test-network
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        python -c 'import time; time.sleep(2)' &&
+        alembic upgrade head &&
+        echo 'Starting test server...' &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Test Runner Service
+  test-runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=testing
+    container_name: saas_test_runner
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-testuser}:${POSTGRES_PASSWORD:-testpass}@test-db:5432/${POSTGRES_TEST_DB:-saas_cafeterias_test}
+      - REDIS_URL=redis://test-redis:6379/0
+      - ENVIRONMENT=testing
+      - TESTING=true
+      - SECRET_KEY=test-secret-key-for-testing-only
+      - BACKEND_TEST_URL=http://test-backend:8000
+    volumes:
+      - ./backend:/app
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
+      - ./requirements-test.txt:/app/requirements-test.txt
+      - test_results:/app/test_results
+    networks:
+      - test-network
+    depends_on:
+      test-backend:
+        condition: service_healthy
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    profiles:
+      - test-runner
+    command: >
+      sh -c "
+        echo 'Installing test dependencies...' &&
+        pip install -r requirements-test.txt &&
+        echo 'Waiting for backend to be ready...' &&
+        python -c 'import time; time.sleep(5)' &&
+        echo 'Running integration tests...' &&
+        pytest tests/ -v --tb=short --junitxml=test_results/results.xml --cov=app --cov-report=html:test_results/htmlcov --cov-report=xml:test_results/coverage.xml -m 'integration or e2e' || exit 0
+      "
+
+volumes:
+  test_postgres_data:
+    driver: local
+  test_results:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge
