@@ -62,7 +62,9 @@
       "Bash(npm test)",
       "Bash(git reset:*)",
       "Bash(export USE_SQLITE=true)",
-      "Bash(export TESTING=true)"
+      "Bash(export TESTING=true)",
+      "Bash(USE_SQLITE=true python3 -c \"from app.db.db import get_engine; engine = get_engine(); print('✅ Engine created successfully'); engine.dispose(); print('✅ Engine disposed correctly')\")",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

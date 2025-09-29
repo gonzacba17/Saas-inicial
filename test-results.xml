@@ -1,1 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="2" time="8.859" timestamp="2025-09-28T00:20:55.634322" hostname="DESKTOP-N5L7IR5"><testcase classname="tests.test_performance.TestMemoryPerformance" name="test_memory_usage_during_load" time="1.484" /><testcase classname="tests.test_performance.TestMemoryPerformance" name="test_object_creation_memory" time="0.090" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="2" failures="0" skipped="0" tests="2" time="0.562" timestamp="2025-09-28T20:24:51.554011" hostname="DESKTOP-N5L7IR5"><testcase classname="" name="tests.test_database" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\wamp64\www\Saas-inicial\tests\test_database.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\gonza\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_database.py:13: in &lt;module&gt;
+    from app.db.db import (
+E   ModuleNotFoundError: No module named 'app'</error></testcase><testcase classname="" name="tests.test_services" time="0.000"><error message="collection failure">ImportError while importing test module 'C:\wamp64\www\Saas-inicial\tests\test_services.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\gonza\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+tests\test_services.py:12: in &lt;module&gt;
+    from app.services import (
+E   ModuleNotFoundError: No module named 'app'</error></testcase></testsuite></testsuites>

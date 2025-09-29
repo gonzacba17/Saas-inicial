@@ -72,9 +72,6 @@ Saas-inicial/
 # 1. Backend - Configurar y ejecutar
 cd backend
 python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
-
 pip install -r requirements.txt
 python create_admin.py
 python -m uvicorn app.main:app --reload
