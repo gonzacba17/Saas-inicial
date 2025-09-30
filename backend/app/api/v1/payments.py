@@ -1,6 +1,7 @@
 """
 Payment management endpoints with MercadoPago integration and role-based access control.
 """
+import os
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any

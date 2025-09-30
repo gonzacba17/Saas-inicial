@@ -26,10 +26,10 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=changeme
-      - N8N_HOST=tu.dominio.com
-      - N8N_PROTOCOL=https
+      - N8N_HOST=localhost
+      - N8N_PROTOCOL=http
       - N8N_PORT=5678
-      - WEBHOOK_URL=https://tu.dominio.com/
+      - WEBHOOK_URL=http://localhost:5678/
       - N8N_PROXY_HOPS=1
     volumes:
       - ~/.n8n:/home/node/.n8n

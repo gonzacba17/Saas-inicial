@@ -98,7 +98,12 @@ def get_engine():
                 cursor.execute("PRAGMA synchronous=OFF")
                 cursor.execute("PRAGMA temp_store=MEMORY")
             else:
-                cursor.execute("PRAGMA journal_mode=WAL")
+                # Use DELETE mode instead of WAL for WSL compatibility
+                try:
+                    cursor.execute("PRAGMA journal_mode=WAL")
+                except Exception:
+                    # Fallback to DELETE mode for WSL/Windows filesystem issues
+                    cursor.execute("PRAGMA journal_mode=DELETE")
                 cursor.execute("PRAGMA synchronous=NORMAL")
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
