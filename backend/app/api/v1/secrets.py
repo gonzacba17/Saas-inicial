@@ -391,17 +391,24 @@ async def backup_secrets(
     try:
         backup_data = await secrets_manager.backup_secrets()
         
-        # Save backup with timestamp
+        # Save encrypted backup with timestamp
         from datetime import datetime
-        backup_id = f"backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
-        backup_file = f"secrets_{backup_id}.json"
-        
         import json
         import os
+        from app.core.encryption import encrypt_backup_data, get_backup_encryption_key
+        
+        backup_id = f"backup_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        backup_file = f"secrets_{backup_id}.enc"
+        
         os.makedirs("backups", exist_ok=True)
         
-        with open(f"backups/{backup_file}", 'w') as f:
-            json.dump(backup_data, f, indent=2)
+        # Encrypt backup data
+        backup_json = json.dumps(backup_data, indent=2)
+        encryption_key = get_backup_encryption_key()
+        encrypted_data = encrypt_backup_data(backup_json.encode('utf-8'), encryption_key)
+        
+        with open(f"backups/{backup_file}", 'wb') as f:
+            f.write(encrypted_data)
         
         # Audit log
         await audit_service.log_action(

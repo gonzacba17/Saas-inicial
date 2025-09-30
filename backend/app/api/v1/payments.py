@@ -84,16 +84,42 @@ def require_business_permission(
 
 def verify_webhook_signature(request_body: bytes, signature: str) -> bool:
     """Verify MercadoPago webhook signature for security."""
-    if not settings.mercadopago_webhook_secret:
-        return True  # Skip verification if secret not configured
+    from app.core.security import get_webhook_secret
     
-    expected_signature = hmac.new(
-        settings.mercadopago_webhook_secret.encode(),
-        request_body,
-        hashlib.sha256
-    ).hexdigest()
+    webhook_secret = get_webhook_secret()
     
-    return hmac.compare_digest(signature, expected_signature)
+    # SECURITY: Webhook secret is MANDATORY in production
+    environment = os.getenv("ENVIRONMENT", "development")
+    if not webhook_secret:
+        if environment == "production":
+            logger.critical("Webhook signature validation failed: No webhook secret configured in production")
+            return False
+        else:
+            logger.warning("Webhook signature validation skipped: No webhook secret configured in development")
+            return True
+    
+    if not signature:
+        logger.warning("Webhook signature validation failed: No signature provided")
+        return False
+    
+    try:
+        expected_signature = hmac.new(
+            webhook_secret.encode('utf-8'),
+            request_body,
+            hashlib.sha256
+        ).hexdigest()
+        
+        # Use constant-time comparison to prevent timing attacks
+        is_valid = hmac.compare_digest(signature, expected_signature)
+        
+        if not is_valid:
+            logger.warning("Webhook signature validation failed: Signature mismatch")
+        
+        return is_valid
+        
+    except Exception as e:
+        logger.error(f"Webhook signature validation error: {str(e)}")
+        return False
 
 # ========================================
 # PAYMENT ENDPOINTS
@@ -298,9 +324,13 @@ async def payment_webhook(
         body = await request.body()
         signature = request.headers.get("x-signature")
         
-        # Verify webhook signature for security
-        if signature and not verify_webhook_signature(body, signature):
-            raise HTTPException(status_code=400, detail="Invalid webhook signature")
+        # SECURITY: Mandatory webhook signature verification
+        if not verify_webhook_signature(body, signature or ""):
+            logger.warning(f"Webhook signature validation failed for payment webhook")
+            raise HTTPException(
+                status_code=401, 
+                detail="Webhook signature validation failed"
+            )
         
         # Parse webhook data
         webhook_data = json.loads(body.decode())

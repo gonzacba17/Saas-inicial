@@ -55,6 +55,7 @@ class GUID(TypeDecorator):
 
 # Database setup with proper UTF-8 encoding and logging
 import logging
+from app.core.security import get_database_url
 
 def get_engine():
     """Get database engine, creating it only if needed."""
@@ -102,24 +103,8 @@ def get_engine():
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()
     else:
-        # PostgreSQL configuration
-        import urllib.parse
-        
-        # Get credentials
-        postgres_user = os.getenv('POSTGRES_USER', 'postgresql')
-        postgres_password = os.getenv('POSTGRES_PASSWORD', 'mapuchito17')
-        postgres_host = os.getenv('POSTGRES_HOST', 'localhost')
-        postgres_port = os.getenv('POSTGRES_PORT', '5432')
-        postgres_db = os.getenv('POSTGRES_DB', 'testdb')
-        
-        # Build URL with encoding
-        encoded_user = urllib.parse.quote_plus(str(postgres_user))
-        encoded_password = urllib.parse.quote_plus(str(postgres_password))
-        encoded_host = urllib.parse.quote_plus(str(postgres_host))
-        encoded_db = urllib.parse.quote_plus(str(postgres_db))
-        
-        db_url = f"postgresql://{encoded_user}:{encoded_password}@{encoded_host}:{postgres_port}/{encoded_db}?client_encoding=utf8"
-        
+        # PostgreSQL configuration - use secure database URL
+        db_url = get_database_url()
         logger.info("Using PostgreSQL database")
         
         _engine = create_engine(

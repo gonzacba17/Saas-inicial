@@ -1,0 +1,520 @@
+name: 🚀 SaaS Cafeterías CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
+      - 'docker-compose*.yml'
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}/backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}/frontend
+
+jobs:
+  # =====================================================
+  # SECURITY SCANNING & CODE ANALYSIS
+  # =====================================================
+  security-scan:
+    name: 🔒 Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Secrets Detection
+      - name: 🔍 Secrets Detection with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      # SAST - Static Application Security Testing
+      - name: 🛡️ SAST with CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript
+          queries: +security-extended,security-and-quality
+
+      - name: 🏗️ Autobuild for CodeQL
+        uses: github/codeql-action/autobuild@v3
+
+      - name: 📊 Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+      # Python Security Scan
+      - name: 🐍 Python Security Scan with Bandit
+        run: |
+          pip install bandit[toml]
+          bandit -r backend/ -f json -o bandit-report.json || true
+          bandit -r backend/ -f txt
+
+      # Dependency Vulnerability Scan
+      - name: 📦 Dependency Vulnerability Scan
+        run: |
+          pip install safety
+          cd backend
+          safety check --json --output safety-report.json || true
+          safety check
+
+      # Frontend Security Scan  
+      - name: 🌐 Frontend Security Scan with npm audit
+        working-directory: frontend
+        run: |
+          npm audit --audit-level moderate
+          npm audit --json > npm-audit-report.json || true
+
+      # Container Image Security Scan
+      - name: 🐳 Container Security with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 📤 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      # Upload security artifacts
+      - name: 📁 Upload Security Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+            npm-audit-report.json
+            trivy-results.sarif
+
+  # =====================================================
+  # BACKEND TESTING & QUALITY
+  # =====================================================
+  backend-tests:
+    name: 🐍 Backend Tests & Quality
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_USER: testuser
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        working-directory: backend
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: 🔍 Code Linting with Ruff
+        working-directory: backend
+        run: |
+          pip install ruff
+          ruff check . --output-format=github
+
+      - name: 📏 Code Formatting with Black
+        working-directory: backend
+        run: |
+          pip install black
+          black --check --diff .
+
+      - name: 🏷️ Type Checking with mypy
+        working-directory: backend
+        continue-on-error: true
+        run: |
+          pip install mypy
+          mypy app/ --ignore-missing-imports
+
+      - name: 🧪 Run Unit Tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ENVIRONMENT: testing
+        run: |
+          pytest tests/ -v --cov=app --cov-report=xml --cov-report=html --cov-fail-under=85
+
+      - name: 🧪 Run Security Tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key-for-ci
+          ENVIRONMENT: testing
+        run: |
+          pytest tests/test_security_fixes.py -v --tb=short
+
+      - name: 📊 Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+
+      - name: 📁 Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: |
+            backend/htmlcov/
+            backend/coverage.xml
+            backend/pytest-report.xml
+
+  # =====================================================
+  # FRONTEND TESTING & QUALITY
+  # =====================================================
+  frontend-tests:
+    name: ⚛️ Frontend Tests & Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🔍 ESLint Check
+        working-directory: frontend
+        run: npm run lint
+
+      - name: 🏷️ TypeScript Check
+        working-directory: frontend
+        run: npm run type-check
+
+      - name: 🧪 Run Unit Tests
+        working-directory: frontend
+        run: npm run test:ci
+
+      - name: 🏗️ Build Application
+        working-directory: frontend
+        run: npm run build
+
+      - name: 📊 Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+      - name: 📁 Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-test-results
+          path: |
+            frontend/coverage/
+            frontend/dist/
+
+  # =====================================================
+  # E2E TESTING
+  # =====================================================
+  e2e-tests:
+    name: 🎭 E2E Tests
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install E2E Dependencies
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: 📦 Install Backend Dependencies
+        working-directory: backend
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 📦 Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🎭 Run Playwright E2E Tests
+        working-directory: e2e
+        env:
+          ENVIRONMENT: testing
+          SECRET_KEY: test-secret-key-for-e2e
+        run: npm test
+
+      - name: 📁 Upload E2E Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+
+  # =====================================================
+  # DOCKER BUILD & PUSH
+  # =====================================================
+  docker-build:
+    name: 🐳 Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [security-scan, backend-tests, frontend-tests]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ matrix.component == 'backend' && env.IMAGE_NAME_BACKEND || env.IMAGE_NAME_FRONTEND }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🐳 Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.component }}
+          file: ${{ matrix.component }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENVIRONMENT=${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+      - name: 🔍 Container Image Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ matrix.component == 'backend' && env.IMAGE_NAME_BACKEND || env.IMAGE_NAME_FRONTEND }}:sha-${{ github.sha }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  # =====================================================
+  # DEPLOYMENT TO STAGING
+  # =====================================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [docker-build, e2e-tests]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Image tags: sha-${{ github.sha }}"
+          # Add deployment commands here
+          # Could use kubectl, docker-compose, or deployment scripts
+
+      - name: 🧪 Staging Health Check
+        run: |
+          echo "Running staging health checks..."
+          # Add health check commands
+          curl -f https://staging.saascafeterias.com/health || exit 1
+
+      - name: 📧 Notify Deployment
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # =====================================================
+  # DEPLOYMENT TO PRODUCTION
+  # =====================================================
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [docker-build, e2e-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: 
+      name: production
+      url: https://saascafeterias.com
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Deploy to Production
+        run: |
+          echo "Deploying to production environment..."
+          echo "Image tags: sha-${{ github.sha }}"
+          # Add production deployment commands here
+          # Blue-green deployment, rolling updates, etc.
+
+      - name: 🧪 Production Health Check
+        run: |
+          echo "Running production health checks..."
+          curl -f https://saascafeterias.com/health || exit 1
+          curl -f https://saascafeterias.com/readyz || exit 1
+
+      - name: 📊 Update Monitoring
+        run: |
+          echo "Updating monitoring dashboards..."
+          # Update Grafana annotations, deployment markers, etc.
+
+      - name: 📧 Notify Deployment Success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'success'
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: '🎉 Production deployment successful! Version: sha-${{ github.sha }}'
+
+      - name: 📧 Notify Deployment Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'failure'
+          channel: '#critical-alerts'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          text: '🚨 Production deployment failed! Version: sha-${{ github.sha }}'
+
+  # =====================================================
+  # QUALITY GATES & REPORTING
+  # =====================================================
+  quality-gate:
+    name: 📊 Quality Gate
+    runs-on: ubuntu-latest
+    needs: [security-scan, backend-tests, frontend-tests, e2e-tests]
+    if: always()
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+
+      - name: 📊 Generate Quality Report
+        run: |
+          echo "## 📊 Quality Gate Report" >> quality-report.md
+          echo "" >> quality-report.md
+          
+          echo "### 🧪 Test Results" >> quality-report.md
+          echo "- Backend Tests: ${{ needs.backend-tests.result }}" >> quality-report.md
+          echo "- Frontend Tests: ${{ needs.frontend-tests.result }}" >> quality-report.md
+          echo "- E2E Tests: ${{ needs.e2e-tests.result }}" >> quality-report.md
+          echo "" >> quality-report.md
+          
+          echo "### 🔒 Security Scan" >> quality-report.md
+          echo "- Security Scan: ${{ needs.security-scan.result }}" >> quality-report.md
+          echo "" >> quality-report.md
+          
+          echo "### 📈 Coverage Reports" >> quality-report.md
+          echo "- Backend Coverage: Available in artifacts" >> quality-report.md
+          echo "- Frontend Coverage: Available in artifacts" >> quality-report.md
+
+      - name: 📄 Comment PR with Quality Report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('quality-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: ❌ Fail if Quality Gate Not Met
+        if: |
+          needs.security-scan.result == 'failure' || 
+          needs.backend-tests.result == 'failure' || 
+          needs.frontend-tests.result == 'failure'
+        run: |
+          echo "Quality gate failed!"
+          exit 1

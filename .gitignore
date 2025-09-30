@@ -40,6 +40,8 @@ ENV/
 
 # Secretos y configuraciones sensibles
 secrets/
+backups/*.enc
+backups/*.json
 *.pem
 *.key
 *.crt

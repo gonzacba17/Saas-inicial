@@ -122,6 +122,11 @@ def health_check_db():
 # Setup error handling (debe ir primero)
 setup_error_handlers(app, debug=settings.debug)
 
+# Setup rate limiting middleware
+from app.middleware.rate_limiter import RateLimitMiddleware
+rate_limit_enabled = settings.environment == "production" or os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+app.add_middleware(RateLimitMiddleware, enabled=rate_limit_enabled)
+
 # Setup security middleware
 setup_security_middleware(app)
 

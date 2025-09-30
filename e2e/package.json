@@ -1,0 +1,76 @@
+{
+  "name": "saas-cafeterias-e2e",
+  "version": "1.0.0",
+  "description": "End-to-end tests for SaaS Cafeterías",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:codegen": "playwright codegen",
+    "install-browsers": "playwright install",
+    "install-deps": "playwright install-deps"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.0"
+  },
+  "playwright": {
+    "testDir": "./tests",
+    "fullyParallel": true,
+    "forbidOnly": true,
+    "retries": 2,
+    "workers": 4,
+    "reporter": [
+      ["html"],
+      ["json", { "outputFile": "test-results.json" }],
+      ["junit", { "outputFile": "test-results.xml" }]
+    ],
+    "use": {
+      "baseURL": "http://localhost:3000",
+      "trace": "on-first-retry",
+      "screenshot": "only-on-failure",
+      "video": "retain-on-failure"
+    },
+    "projects": [
+      {
+        "name": "chromium",
+        "use": {
+          "...@playwright/test#chromium"
+        }
+      },
+      {
+        "name": "firefox",
+        "use": {
+          "...@playwright/test#firefox"
+        }
+      },
+      {
+        "name": "webkit",
+        "use": {
+          "...@playwright/test#webkit"
+        }
+      },
+      {
+        "name": "mobile-chrome",
+        "use": {
+          "...@playwright/test#mobile-chrome"
+        }
+      }
+    ],
+    "webServer": [
+      {
+        "command": "cd ../backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000",
+        "port": 8000,
+        "reuseExistingServer": true
+      },
+      {
+        "command": "cd ../frontend && npm run dev",
+        "port": 3000,
+        "reuseExistingServer": true
+      }
+    ]
+  }
+}

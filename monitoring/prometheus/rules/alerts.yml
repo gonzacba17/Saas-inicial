@@ -1,0 +1,261 @@
+groups:
+  # High Priority Alerts
+  - name: saas.high_priority
+    rules:
+      # Service Down Alerts
+      - alert: ServiceDown
+        expr: up{job=~"saas-backend|postgres|redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "{{ $labels.job }} service is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://docs.saascafeterias.com/runbooks/service-down"
+
+      # Database Connection Issues
+      - alert: DatabaseConnectionHigh
+        expr: sum(rate(postgres_up[5m])) < 0.95
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Database connection issues detected"
+          description: "PostgreSQL connection success rate is {{ $value }}% over the last 5 minutes."
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(fastapi_requests_total{status=~"5.."}[5m]) / rate(fastapi_requests_total[5m]) > 0.1
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.path }}"
+
+      # Memory Usage Critical
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.1
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Critical memory usage"
+          description: "Available memory is below 10%: {{ $value | humanizePercentage }}"
+
+      # Disk Usage Critical
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes) < 0.1
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Critical disk space usage"
+          description: "Disk space usage is above 90% on {{ $labels.device }}"
+
+  # Medium Priority Alerts  
+  - name: saas.medium_priority
+    rules:
+      # High Response Time
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(fastapi_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.path }}"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 80%: {{ $value | humanizePercentage }}"
+
+      # Redis Memory Usage
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+      # Database Slow Queries
+      - alert: DatabaseSlowQueries
+        expr: rate(postgres_stat_activity_count{state="active"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High number of active database connections"
+          description: "{{ $value }} active database connections detected"
+
+      # Rate Limiting Triggered
+      - alert: RateLimitingTriggered
+        expr: increase(fastapi_requests_total{status="429"}[5m]) > 100
+        for: 1m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "Rate limiting frequently triggered"
+          description: "{{ $value }} rate limited requests in the last 5 minutes"
+
+  # Business Logic Alerts
+  - name: saas.business_metrics
+    rules:
+      # Failed Orders
+      - alert: HighFailedOrderRate
+        expr: rate(orders_total{status="failed"}[5m]) / rate(orders_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: business
+        annotations:
+          summary: "High failed order rate"
+          description: "Failed order rate is {{ $value | humanizePercentage }}"
+
+      # Payment Failures
+      - alert: PaymentFailures
+        expr: rate(payments_total{status="failed"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "High payment failure rate"
+          description: "{{ $value }} payment failures per second"
+
+      # User Registration Issues
+      - alert: UserRegistrationDown
+        expr: rate(user_registrations_total[5m]) == 0
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "No user registrations"
+          description: "No new user registrations in the last 10 minutes"
+
+      # AI Service Issues
+      - alert: AIServiceHighLatency
+        expr: histogram_quantile(0.95, rate(ai_request_duration_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "AI service high latency"
+          description: "95th percentile AI request duration is {{ $value }}s"
+
+  # Security Alerts
+  - name: saas.security
+    rules:
+      # Authentication Failures
+      - alert: HighAuthFailureRate
+        expr: rate(fastapi_requests_total{path="/api/v1/auth/token",status="401"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "{{ $value }} failed login attempts per second"
+
+      # Suspicious Activity
+      - alert: SuspiciousActivity
+        expr: rate(fastapi_requests_total{status="403"}[5m]) > 50
+        for: 1m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "High number of forbidden requests"
+          description: "{{ $value }} forbidden requests per second - possible attack"
+
+      # JWT Token Issues
+      - alert: JWTTokenIssues
+        expr: increase(jwt_validation_failures_total[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "High JWT validation failures"
+          description: "{{ $value }} JWT validation failures in the last 5 minutes"
+
+  # Infrastructure Alerts
+  - name: saas.infrastructure
+    rules:
+      # Container Restarts
+      - alert: ContainerRestarting
+        expr: increase(container_restart_count[1h]) > 5
+        for: 0m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting frequently"
+          description: "Container has restarted {{ $value }} times in the last hour"
+
+      # Network Issues
+      - alert: HighNetworkErrors
+        expr: rate(node_network_receive_errs_total[5m]) + rate(node_network_transmit_errs_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High network error rate"
+          description: "Network errors: {{ $value }} per second"
+
+      # Load Balancer Issues
+      - alert: LoadBalancerDown
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Load balancer health check failed"
+          description: "Health check for {{ $labels.instance }} has been failing for 1 minute"
+
+  # Business KPI Alerts  
+  - name: saas.kpis
+    rules:
+      # Low Revenue
+      - alert: LowDailyRevenue
+        expr: revenue_daily_total < 1000
+        for: 0m
+        labels:
+          severity: info
+          team: business
+        annotations:
+          summary: "Daily revenue below threshold"
+          description: "Daily revenue is ${{ $value }}, below the $1000 threshold"
+
+      # Business Churn
+      - alert: BusinessChurnHigh  
+        expr: rate(businesses_total{status="deleted"}[1d]) / rate(businesses_total{status="active"}[1d]) > 0.1
+        for: 0m
+        labels:
+          severity: warning
+          team: business
+        annotations:
+          summary: "Business churn rate is high"
+          description: "{{ $value | humanizePercentage }} of businesses are churning"
