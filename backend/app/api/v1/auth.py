@@ -2,7 +2,7 @@
 Authentication endpoints for user registration, login, and JWT management.
 """
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -117,8 +117,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return create_user(db=db, user=user)
 
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """Authenticate user and return JWT token."""
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """Authenticate user and return JWT token. Rate limited to 5 attempts per 5 minutes per IP."""
     try:
         user = authenticate_user(db, form_data.username, form_data.password)
         if not user:

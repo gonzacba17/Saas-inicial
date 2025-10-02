@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from typing import Optional
 import os
 from pathlib import Path
@@ -52,6 +53,39 @@ class Settings(BaseSettings):
     secret_key: str = os.getenv("SECRET_KEY", "change-this-in-production")
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    @field_validator('secret_key')
+    def validate_secret_key(cls, v, info):
+        """Validar que SECRET_KEY sea segura en producción"""
+        env = info.data.get('environment', 'development')
+        
+        if env == 'production':
+            forbidden_patterns = [
+                'development-secret-key',
+                'change-in-production',
+                'change-this-in-production',
+                'your-secret-key',
+                'example',
+                'test',
+                'change-me'
+            ]
+            
+            if any(pattern in v.lower() for pattern in forbidden_patterns):
+                raise ValueError(
+                    '\n🚨 FATAL ERROR: Development SECRET_KEY detected in production!\n\n'
+                    'Generate a secure key with:\n'
+                    '  python -c "import secrets; print(secrets.token_urlsafe(64))"\n\n'
+                    'Then update your .env file with ENVIRONMENT=production\n'
+                )
+            
+            if len(v) < 64:
+                raise ValueError(
+                    f'SECRET_KEY too short: {len(v)} chars (minimum: 64 in production)\n'
+                    'Generate a new one with:\n'
+                    '  python -c "import secrets; print(secrets.token_urlsafe(64))"'
+                )
+        
+        return v
 
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS POSTGRESQL
