@@ -37,3 +37,7 @@ mercadopago==2.2.1
 # Testing (moved from requirements-dev.txt for full_test.py)
 pytest==8.0.0
 pytest-asyncio==0.23.4
+
+# Removed unused dependencies:
+# - nltk==3.8.1 (NLP library - not used in codebase)
+# - marshmallow==3.20.1 (Serialization - not used, using Pydantic instead)

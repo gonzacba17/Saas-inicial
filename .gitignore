@@ -164,6 +164,8 @@ htmlcov/
 pytest.ini
 pytest_report.*
 *test*.db
+test-results.xml
+coverage.xml
 
 # Development tools (removed)
 scripts/
@@ -189,8 +191,16 @@ backend/debug_db.py
 backend/fix_*.py
 backend/current_requirements.txt
 backend/requirements-dev.txt
+backend/:memory:
 
 # Temporary files
 asd.json
 claude.bat
 setup_tests.ps1
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Archive and backups
+archive/
+*.backup
