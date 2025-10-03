@@ -68,7 +68,18 @@
       "Bash(./venv/Scripts/pip.exe install:*)",
       "Bash(for i in {1..6})",
       "Bash(do echo \"=== Intento $i ===\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(venv/Scripts/python.exe -m pytest tests/test_auth_comprehensive.py --cov=app.api.v1.auth --cov-report=html 2 >& 1)",
+      "Bash(venv/Scripts/python.exe -m pytest tests/test_auth_comprehensive.py --cov=app.api.v1.auth --cov-report=term -v 2 >& 1)",
+      "Bash(venv/Scripts/python.exe -m pytest tests/test_auth_comprehensive.py::TestUserLogin::test_login_success -v -s 2 >& 1)",
+      "Bash(venv/Scripts/python.exe -m pytest tests/test_auth_comprehensive.py --cov=app.api.v1.auth --cov-report=term 2 >& 1)",
+      "Bash(venv/Scripts/python.exe -m pytest tests/test_auth_comprehensive.py::TestJWTAuthentication::test_refresh_token_without_auth -v --tb=short 2 >& 1)",
+      "Bash(venv/Scripts/python.exe -m pytest tests/test_auth_comprehensive.py -v 2 >& 1)",
+      "Bash(venv/Scripts/python.exe:*)",
+      "Bash(venv/Scripts/pip.exe show:*)",
+      "Bash(venv/Scripts/pip.exe list:*)",
+      "Bash(venv/Scripts/pip.exe install:*)",
+      "Bash(venv/Scripts/safety.exe check:*)"
     ],
     "deny": []
   }

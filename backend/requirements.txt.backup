@@ -1,0 +1,39 @@
+# =============================================
+# CAFETERIA IA - PRODUCTION DEPENDENCIES
+# Core dependencies for production deployment
+# =============================================
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Database
+sqlalchemy==2.0.25
+alembic==1.13.1
+psycopg2-binary==2.9.9
+
+# Security & Authentication
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+bcrypt==4.0.1
+pydantic[email]==2.5.2
+email-validator==2.1.0.post1
+cryptography==41.0.8
+
+# Configuration
+python-dotenv==1.0.1
+pydantic-settings==2.1.0
+
+# HTTP & File handling
+python-multipart==0.0.7
+httpx==0.26.0
+
+# External Services
+openai==1.10.0
+redis==5.0.1
+celery==5.3.6
+mercadopago==2.2.1
+
+# Testing (moved from requirements-dev.txt for full_test.py)
+pytest==8.0.0
+pytest-asyncio==0.23.4
