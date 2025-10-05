@@ -1,51 +1,72 @@
-FROM python:3.11-slim
+# syntax=docker/dockerfile:1.4
 
-# Set build argument
-ARG ENVIRONMENT=development
+FROM python:3.11-slim AS builder
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    ENVIRONMENT=${ENVIRONMENT} \
-    PYTHONPATH=/app
+LABEL maintainer="security@saascafeterias.com"
+LABEL version="1.0.0"
+LABEL description="Backend API - FastAPI Production Build"
 
-# Install system dependencies
+ARG PYTHON_VERSION=3.11
+ARG PIP_NO_CACHE_DIR=1
+ARG PIP_DISABLE_PIP_VERSION_CHECK=1
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
+        gcc \
+        g++ \
         libpq-dev \
         curl \
-        netcat-traditional \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd --gid 1000 builder \
+    && useradd --uid 1000 --gid builder --shell /bin/bash --create-home builder
 
-# Set work directory
+WORKDIR /build
+
+COPY --chown=builder:builder requirements.txt .
+
+USER builder
+RUN pip install --user --no-cache-dir --no-warn-script-location \
+    -r requirements.txt
+
+FROM python:3.11-slim AS runtime
+
+LABEL maintainer="security@saascafeterias.com"
+LABEL version="1.0.0"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libpq5 \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+RUN groupadd --gid 1000 saas \
+    && useradd --uid 1000 --gid saas --shell /bin/bash --create-home saas
+
+COPY --from=builder --chown=saas:saas /home/builder/.local /home/saas/.local
+
+ENV PATH=/home/saas/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONHASHSEED=random \
+    PYTHONFAULTHANDLER=1
+
 WORKDIR /app
 
-# Install Python dependencies
-COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && if [ "$ENVIRONMENT" = "development" ]; then pip install --no-cache-dir -r requirements-dev.txt; fi
+COPY --chown=saas:saas ./app /app/app
+COPY --chown=saas:saas ./alembic /app/alembic
+COPY --chown=saas:saas ./alembic.ini /app/
+COPY --chown=saas:saas ./prestart.sh /app/
 
-# Copy project
-COPY . .
+RUN chmod +x /app/prestart.sh
 
-# Create necessary directories
-RUN mkdir -p logs && chown -R appuser:appuser /app
+USER saas
 
-# Switch to non-root user
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Expose port
 EXPOSE 8000
 
-# Default command
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+
+CMD ["/app/prestart.sh"]

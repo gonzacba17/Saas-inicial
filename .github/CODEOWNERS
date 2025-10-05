@@ -1,0 +1,35 @@
+# CODEOWNERS - Code Review Assignment
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+*                                   @gonzacba17
+
+# Backend code review
+/backend/**                         @gonzacba17
+
+# Frontend code review
+/frontend/**                        @gonzacba17
+
+# CI/CD workflows require DevOps review
+/.github/workflows/**               @gonzacba17
+
+# Security and infrastructure
+/docker-compose*.yml                @gonzacba17
+/monitoring/**                      @gonzacba17
+/scripts/**                         @gonzacba17
+
+# Database migrations require extra review
+/backend/alembic/versions/**        @gonzacba17
+
+# Documentation
+/docs/**                            @gonzacba17
+
+# Root configuration files
+/*.yml                              @gonzacba17
+/*.json                             @gonzacba17
+/.*                                 @gonzacba17
+
+# Security-sensitive files
+/.github/dependabot.yml             @gonzacba17
+/SECURITY.md                        @gonzacba17
+/.git-secrets-patterns              @gonzacba17

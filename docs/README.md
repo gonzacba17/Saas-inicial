@@ -87,7 +87,7 @@ python tests/full_test.py
 
 ### 👤 Credenciales de Desarrollo
 
-**Usuario Administrador:**
+**Usuario Administrador Local:**
 - **Email**: `admin@saas.test`
 - **Password**: `Admin1234!`
 - **Rol**: admin (permisos completos)
@@ -97,7 +97,11 @@ python tests/full_test.py
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 
-> ⚠️ **Importante**: Estas credenciales son solo para desarrollo local.
+> ⚠️ **CRÍTICO**: 
+> - Estas credenciales son **SOLO** para desarrollo local
+> - **NUNCA** usar en producción o staging
+> - Cambiar inmediatamente después del primer deploy
+> - Ver [SECURITY.md](../SECURITY.md) para mejores prácticas
 
 ## 🏗️ Arquitectura del Sistema
 
@@ -236,29 +240,37 @@ python tests/test_e2e_flow.py
 
 ### ⚙️ Variables de Entorno Esenciales
 
-**Backend (.env):**
+> 🔒 **IMPORTANTE**: Nunca commitear archivos `.env` reales al repositorio!
+
+**Backend (.env) - Desarrollo:**
 ```env
-# Base de datos (SQLite para desarrollo)
+# Base de datos (SQLite para desarrollo SOLAMENTE)
 DATABASE_URL=sqlite:///./saas_cafeterias_local.db
 
-# Seguridad (generar claves únicas en producción)
-SECRET_KEY=development-secret-key-64-chars-minimum-change-in-production
+# Seguridad - CAMBIAR en producción!
+# Generar con: python -c "import secrets; print(secrets.token_urlsafe(64))"
+SECRET_KEY=CHANGE_ME_generate_unique_secret_for_each_environment
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 # Entorno
 ENVIRONMENT=development
 DEBUG=true
 
-# Opcionales para funcionalidades completas
+# APIs Externas (opcional para desarrollo)
 REDIS_URL=redis://localhost:6379/0
-MERCADOPAGO_ACCESS_TOKEN=your-token-here
-OPENAI_API_KEY=your-key-here
+MERCADOPAGO_ACCESS_TOKEN=TEST-your-sandbox-token
+OPENAI_API_KEY=sk-proj-your-development-key
 ```
 
 **Frontend (.env):**
 ```env
 VITE_API_URL=http://localhost:8000
 ```
+
+**📚 Configuración Completa:**
+- Ver `.env.example` para todas las variables disponibles
+- Ver `backend/.env.production.example` para configuración de producción
+- Ver [SECURITY.md](../SECURITY.md) para gestión segura de secretos
 
 ### 🔧 Comandos de Desarrollo
 

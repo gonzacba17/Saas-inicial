@@ -1,0 +1,108 @@
+name: ✅ PR Quality Gate
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  validate-pr:
+    name: 📋 PR Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check PR Title Convention
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          
+          if ! echo "$PR_TITLE" | grep -qE '^(feat|fix|docs|style|refactor|test|chore|perf|ci|security)(\(.+\))?: .+'; then
+            echo "❌ PR title no cumple convención:"
+            echo "   Formato: tipo(scope): descripción"
+            echo "   Tipos: feat, fix, docs, style, refactor, test, chore, perf, ci, security"
+            exit 1
+          fi
+      
+      - name: Check PR Description
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          
+          if [ -z "$PR_BODY" ]; then
+            echo "❌ PR debe tener descripción"
+            exit 1
+          fi
+          
+          if ! echo "$PR_BODY" | grep -qi "## changes\|## descripción\|## what"; then
+            echo "⚠️ Warning: PR debería explicar los cambios realizados"
+          fi
+      
+      - name: Check for Breaking Changes
+        run: |
+          if echo "${{ github.event.pull_request.body }}" | grep -qi "breaking change\|BREAKING"; then
+            echo "🚨 BREAKING CHANGE detectado"
+            echo "::warning::Este PR contiene breaking changes"
+          fi
+      
+      - name: Conventional Commits Check
+        uses: wagoid/commitlint-github-action@v5
+        continue-on-error: true
+
+  analyze-changes:
+    name: 🔍 Analyze Changed Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get Changed Files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files: |
+            backend/**
+            frontend/**
+            docker-compose*.yml
+            .github/workflows/**
+      
+      - name: Check for Sensitive Files
+        run: |
+          SENSITIVE_PATTERNS=(.env .pem .key .p12 credentials secret)
+          
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            for pattern in "${SENSITIVE_PATTERNS[@]}"; do
+              if echo "$file" | grep -qi "$pattern"; then
+                echo "⚠️ Warning: Archivo potencialmente sensible modificado: $file"
+              fi
+            done
+          done
+      
+      - name: Require Tests for Code Changes
+        run: |
+          CODE_CHANGED="${{ steps.changed-files.outputs.any_changed }}"
+          TESTS_CHANGED=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | grep -c "test" || true)
+          
+          if [ "$CODE_CHANGED" = "true" ] && [ "$TESTS_CHANGED" -eq 0 ]; then
+            echo "⚠️ Código modificado sin tests correspondientes"
+            echo "::warning::Considera agregar tests para los cambios realizados"
+          fi
+
+  all-checks:
+    name: ✅ All Quality Checks Passed
+    runs-on: ubuntu-latest
+    needs: [validate-pr, analyze-changes]
+    if: always()
+    
+    steps:
+      - name: Check All Jobs Status
+        run: |
+          if [ "${{ needs.validate-pr.result }}" != "success" ] || \
+             [ "${{ needs.analyze-changes.result }}" != "success" ]; then
+            echo "❌ Algunos checks fallaron"
+            exit 1
+          fi
+          echo "✅ Todos los quality checks pasaron"

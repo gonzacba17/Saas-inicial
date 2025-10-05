@@ -1,62 +1,50 @@
-# Multi-stage build for production optimization
-FROM node:20-alpine AS base
+# syntax=docker/dockerfile:1.4
 
-# Set working directory
-WORKDIR /app
+FROM node:18-alpine AS builder
 
-# Copy package files
-COPY package*.json ./
+LABEL stage=builder
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+WORKDIR /build
 
-# Development stage
-FROM node:20-alpine AS development
-WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --only=production \
+    && npm cache clean --force
 
-# Copy package files
-COPY package*.json ./
-
-# Install all dependencies (including dev)
-RUN npm ci
-
-# Copy source code
 COPY . .
 
-# Expose port
-EXPOSE 3000
+ARG VITE_API_URL=http://localhost:8000
+ARG NODE_ENV=production
 
-# Start development server
-CMD ["npm", "run", "dev"]
-
-# Build stage
-FROM base AS build
-WORKDIR /app
-
-# Copy source code
-COPY . .
-
-# Install dev dependencies for build
-RUN npm ci
-
-# Build the application
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine AS production
+FROM nginx:1.25-alpine AS runtime
 
-# Copy built assets from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+LABEL maintainer="security@saascafeterias.com"
+LABEL version="1.0.0"
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN apk add --no-cache curl
 
-# Expose port
+RUN rm /etc/nginx/conf.d/default.conf
+
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY conf.d/default.conf /etc/nginx/conf.d/default.conf
+
+COPY --from=builder --chown=nginx:nginx /build/dist /usr/share/nginx/html
+
+RUN addgroup -g 1000 -S appgroup || true \
+    && adduser -u 1000 -S appuser -G appgroup || true \
+    && chown -R appuser:appgroup /usr/share/nginx/html \
+    && chown -R appuser:appgroup /var/cache/nginx \
+    && chown -R appuser:appgroup /var/log/nginx \
+    && chown -R appuser:appgroup /etc/nginx/conf.d \
+    && touch /var/run/nginx.pid \
+    && chown -R appuser:appgroup /var/run/nginx.pid
+
+USER appuser
+
 EXPOSE 80
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD curl -f http://localhost:80/health || exit 1
 
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

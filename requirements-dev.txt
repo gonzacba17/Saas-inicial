@@ -1,0 +1,45 @@
+# =================================================
+# DEVELOPMENT DEPENDENCIES
+# =================================================
+# Dependencies for local development environment only
+# NOT for production use
+
+# Admin creation script dependencies
+bcrypt==4.1.2
+email-validator==2.1.0
+python-dotenv==1.0.0
+
+# Development tools
+ipython>=8.12.0
+ipdb>=0.13.13
+
+# Code quality
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+pylint>=3.0.0
+mypy>=1.7.0
+
+# Pre-commit hooks
+pre-commit>=3.5.0
+
+# Testing (include test requirements)
+-r requirements-test.txt
+
+# Documentation
+mkdocs>=1.5.0
+mkdocs-material>=9.4.0
+mkdocstrings[python]>=0.24.0
+
+# Database management
+alembic>=1.12.0
+pgcli>=4.0.0  # PostgreSQL CLI with autocomplete
+
+# Performance profiling
+py-spy>=0.3.14
+memory-profiler>=0.61.0
+line-profiler>=4.1.0
+
+# Environment management
+python-decouple>=3.8
+environs>=10.0.0

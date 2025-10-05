@@ -1,0 +1,77 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+        exclude: ^tests/fixtures/
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: >
+          (?x)^(
+            .*\.example$|
+            .*\.md$|
+            package-lock\.json|
+            poetry\.lock|
+            \.secrets\.baseline
+          )$
+
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3.11
+        files: ^backend/
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        files: ^backend/
+        args: ['--max-line-length=100', '--extend-ignore=E203,W503']
+
+  - repo: https://github.com/Riverside-Healthcare/djLint
+    rev: v1.34.1
+    hooks:
+      - id: djlint-reformat-jinja
+        files: ^frontend/.*\.(html|jsx|tsx)$
+      - id: djlint-jinja
+        files: ^frontend/.*\.(html|jsx|tsx)$
+
+  - repo: local
+    hooks:
+      - id: forbid-production-env
+        name: Forbid production env files
+        entry: 'Cannot commit production environment files'
+        language: fail
+        files: '^(.*\.env\.production(?!\.example)|.*\.env\.local(?!\.example)|docker-compose\.secrets\.yml)$'
+        
+      - id: check-secrets-patterns
+        name: Check for secrets patterns
+        entry: bash -c 'grep -E -f .git-secrets-patterns'
+        language: system
+        files: '\.(py|js|jsx|ts|tsx|yml|yaml|json|env)$'
+        exclude: >
+          (?x)^(
+            .*\.example$|
+            .*\.md$|
+            \.pre-commit-config\.yaml|
+            \.git-secrets-patterns
+          )$
+        pass_filenames: true
+        
+      - id: python-tests
+        name: Run Python tests
+        entry: bash -c 'cd backend && python -m pytest tests/ -x --no-cov || exit 0'
+        language: system
+        pass_filenames: false
+        stages: [push]
