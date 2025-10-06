@@ -190,8 +190,9 @@ backend/create_test_db.py
 backend/debug_db.py
 backend/fix_*.py
 backend/current_requirements.txt
-backend/requirements-dev.txt
 backend/:memory:
+backend/logs/*.log
+backend/logs/*.sql
 
 # Temporary files
 asd.json
@@ -204,3 +205,22 @@ setup_tests.ps1
 # Archive and backups
 archive/
 *.backup
+*.bak
+*.old
+
+# Test reports and artifacts
+test_reports/
+*.html
+*.xml
+test-results/
+.coverage
+htmlcov/
+
+# Memory dumps
+:memory:
+
+# N8N data
+n8n/.n8n/
+
+# Docker monitoring duplicates
+monitoring/docker-compose.monitoring.yml

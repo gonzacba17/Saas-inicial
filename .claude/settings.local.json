@@ -81,7 +81,10 @@
       "Bash(venv/Scripts/pip.exe install:*)",
       "Bash(venv/Scripts/safety.exe check:*)",
       "Bash(cat:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(diff:*)",
+      "Bash(pyflakes:*)",
+      "Bash(git check-ignore:*)"
     ],
     "deny": []
   }

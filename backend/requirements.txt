@@ -26,17 +26,12 @@ pydantic-settings==2.1.0
 
 # HTTP & File handling
 python-multipart==0.0.7
-httpx==0.26.0
+requests==2.31.0
 
 # External Services
 openai==1.10.0
 redis==5.0.1
-celery==5.3.6
 mercadopago==2.2.1
-
-# Testing (moved from requirements-dev.txt for full_test.py)
-pytest==8.0.0
-pytest-asyncio==0.23.4
 
 # Removed unused dependencies:
 # - nltk==3.8.1 (NLP library - not used in codebase)
