@@ -74,9 +74,23 @@ def get_engine():
             db_url = "sqlite:///:memory:"
             logger.info("Using in-memory SQLite database for testing")
         else:
-            sqlite_file = os.getenv('SQLITE_FILE', 'saas_cafeterias.db')
-            db_url = f"sqlite:///./{sqlite_file}"
-            logger.info(f"Using SQLite database: {sqlite_file}")
+            sqlite_file = os.getenv('SQLITE_FILE', 'app/db/app.db')
+            
+            # Get absolute path from backend directory
+            if not os.path.isabs(sqlite_file):
+                backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                sqlite_file = os.path.join(backend_dir, sqlite_file)
+            
+            # Ensure directory exists
+            db_dir = os.path.dirname(sqlite_file)
+            if db_dir and not os.path.exists(db_dir):
+                os.makedirs(db_dir, exist_ok=True)
+            
+            # Convert to absolute path with forward slashes for SQLite URL
+            sqlite_path = os.path.abspath(sqlite_file).replace("\\", "/")
+            
+            db_url = f"sqlite:///{sqlite_path}"
+            logger.info(f"Using SQLite database: {sqlite_path}")
         
         # Create SQLite engine
         connect_args = {"check_same_thread": False}
@@ -185,6 +199,37 @@ class AIAssistantType(enum.Enum):
     SALES_ANALYSIS = "sales_analysis"
     BUSINESS_INSIGHTS = "business_insights"
     GENERAL_QUERY = "general_query"
+
+class ComprobanteType(enum.Enum):
+    FACTURA_A = "factura_a"
+    FACTURA_B = "factura_b"
+    FACTURA_C = "factura_c"
+    NOTA_CREDITO = "nota_credito"
+    NOTA_DEBITO = "nota_debito"
+    RECIBO = "recibo"
+    PRESUPUESTO = "presupuesto"
+
+class ComprobanteStatus(enum.Enum):
+    PENDIENTE = "pendiente"
+    PROCESADO = "procesado"
+    VALIDADO = "validado"
+    RECHAZADO = "rechazado"
+    ARCHIVADO = "archivado"
+
+class VencimientoType(enum.Enum):
+    IMPUESTO = "impuesto"
+    SERVICIO = "servicio"
+    ALQUILER = "alquiler"
+    PROVEEDOR = "proveedor"
+    CREDITO = "credito"
+    SEGURO = "seguro"
+    OTRO = "otro"
+
+class VencimientoStatus(enum.Enum):
+    PENDIENTE = "pendiente"
+    PAGADO = "pagado"
+    VENCIDO = "vencido"
+    CANCELADO = "cancelado"
 
 class PaymentStatus(enum.Enum):
     PENDING = "pending"
@@ -325,6 +370,68 @@ class AIConversation(Base):
     user = relationship("User")
     business = relationship("Business")
 
+class Comprobante(Base):
+    __tablename__ = "comprobantes"
+    
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    
+    tipo = Column(Enum(ComprobanteType), nullable=False)
+    numero = Column(String, nullable=False, index=True)
+    fecha_emision = Column(DateTime(timezone=True), nullable=False)
+    fecha_vencimiento = Column(DateTime(timezone=True))
+    
+    cuit_emisor = Column(String(11), index=True)
+    razon_social_emisor = Column(String)
+    
+    subtotal = Column(Float, nullable=False, default=0)
+    iva = Column(Float, default=0)
+    total = Column(Float, nullable=False)
+    moneda = Column(String, default="ARS")
+    
+    status = Column(Enum(ComprobanteStatus), default=ComprobanteStatus.PENDIENTE)
+    
+    file_path = Column(String)
+    file_url = Column(String)
+    ocr_data = Column(Text)
+    
+    notas = Column(Text)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    business = relationship("Business")
+    user = relationship("User")
+
+class Vencimiento(Base):
+    __tablename__ = "vencimientos"
+    
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=False)
+    comprobante_id = Column(GUID(), ForeignKey("comprobantes.id"), nullable=True)
+    
+    tipo = Column(Enum(VencimientoType), nullable=False)
+    descripcion = Column(String, nullable=False)
+    monto = Column(Float, nullable=False)
+    moneda = Column(String, default="ARS")
+    
+    fecha_vencimiento = Column(DateTime(timezone=True), nullable=False, index=True)
+    fecha_pago = Column(DateTime(timezone=True))
+    
+    status = Column(Enum(VencimientoStatus), default=VencimientoStatus.PENDIENTE, index=True)
+    
+    recordatorio_dias_antes = Column(Integer, default=7)
+    notificacion_enviada = Column(Boolean, default=False)
+    
+    notas = Column(Text)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    business = relationship("Business")
+    comprobante = relationship("Comprobante")
+
 class Payment(Base):
     __tablename__ = "payments"
     
@@ -351,8 +458,8 @@ class Payment(Base):
     total_paid_amount = Column(Float)
     
     # Metadata
-    payment_metadata = Column(Text)  # JSON string for additional data
-    webhook_data = Column(Text)  # Store webhook payload
+    payment_metadata = Column(Text)
+    webhook_data = Column(Text)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -361,6 +468,22 @@ class Payment(Base):
     
     # Relationships
     order = relationship("Order", back_populates="payments")
+    user = relationship("User")
+    business = relationship("Business")
+
+class ChatHistory(Base):
+    __tablename__ = "chat_history"
+    
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=True)
+    role = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    tokens_used = Column(Integer, default=0)
+    model = Column(String, default="gpt-4")
+    metadata = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
     user = relationship("User")
     business = relationship("Business")
 
@@ -913,4 +1036,229 @@ class PaymentCRUD:
         return db.query(Payment).filter(
             Payment.status == status
         ).order_by(Payment.created_at.desc()).offset(skip).limit(limit).all()
+
+class ComprobanteCRUD:
+    """CRUD operations for Comprobante model."""
+    
+    @staticmethod
+    def create(db, comprobante_data):
+        """Create a new comprobante."""
+        db_comprobante = Comprobante(**comprobante_data)
+        db.add(db_comprobante)
+        db.commit()
+        db.refresh(db_comprobante)
+        return db_comprobante
+    
+    @staticmethod
+    def get_by_id(db, comprobante_id):
+        """Get comprobante by ID."""
+        return db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
+    
+    @staticmethod
+    def get_by_business(db, business_id, skip=0, limit=100):
+        """Get all comprobantes for a business."""
+        return db.query(Comprobante).filter(
+            Comprobante.business_id == business_id
+        ).order_by(Comprobante.fecha_emision.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_by_numero(db, business_id, numero):
+        """Get comprobante by numero."""
+        return db.query(Comprobante).filter(
+            Comprobante.business_id == business_id,
+            Comprobante.numero == numero
+        ).first()
+    
+    @staticmethod
+    def get_by_status(db, business_id, status, skip=0, limit=100):
+        """Get comprobantes by status."""
+        return db.query(Comprobante).filter(
+            Comprobante.business_id == business_id,
+            Comprobante.status == status
+        ).order_by(Comprobante.fecha_emision.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_by_date_range(db, business_id, fecha_inicio, fecha_fin, skip=0, limit=100):
+        """Get comprobantes by date range."""
+        return db.query(Comprobante).filter(
+            Comprobante.business_id == business_id,
+            Comprobante.fecha_emision >= fecha_inicio,
+            Comprobante.fecha_emision <= fecha_fin
+        ).order_by(Comprobante.fecha_emision.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def update(db, comprobante_id, update_data):
+        """Update comprobante."""
+        db_comprobante = db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
+        if db_comprobante:
+            for field, value in update_data.items():
+                setattr(db_comprobante, field, value)
+            db.commit()
+            db.refresh(db_comprobante)
+        return db_comprobante
+    
+    @staticmethod
+    def update_status(db, comprobante_id, status):
+        """Update comprobante status."""
+        db_comprobante = db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
+        if db_comprobante:
+            db_comprobante.status = status
+            db.commit()
+            db.refresh(db_comprobante)
+        return db_comprobante
+    
+    @staticmethod
+    def delete(db, comprobante_id):
+        """Delete comprobante."""
+        db_comprobante = db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
+        if db_comprobante:
+            db.delete(db_comprobante)
+            db.commit()
+        return True
+
+class VencimientoCRUD:
+    """CRUD operations for Vencimiento model."""
+    
+    @staticmethod
+    def create(db, vencimiento_data):
+        """Create a new vencimiento."""
+        db_vencimiento = Vencimiento(**vencimiento_data)
+        db.add(db_vencimiento)
+        db.commit()
+        db.refresh(db_vencimiento)
+        return db_vencimiento
+    
+    @staticmethod
+    def get_by_id(db, vencimiento_id):
+        """Get vencimiento by ID."""
+        return db.query(Vencimiento).filter(Vencimiento.id == vencimiento_id).first()
+    
+    @staticmethod
+    def get_by_business(db, business_id, skip=0, limit=100):
+        """Get all vencimientos for a business."""
+        return db.query(Vencimiento).filter(
+            Vencimiento.business_id == business_id
+        ).order_by(Vencimiento.fecha_vencimiento.asc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_by_status(db, business_id, status, skip=0, limit=100):
+        """Get vencimientos by status."""
+        return db.query(Vencimiento).filter(
+            Vencimiento.business_id == business_id,
+            Vencimiento.status == status
+        ).order_by(Vencimiento.fecha_vencimiento.asc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_proximos(db, business_id, dias=30):
+        """Get vencimientos próximos (próximos N días)."""
+        from datetime import datetime, timedelta
+        hoy = datetime.now()
+        fecha_limite = hoy + timedelta(days=dias)
+        
+        return db.query(Vencimiento).filter(
+            Vencimiento.business_id == business_id,
+            Vencimiento.status == VencimientoStatus.PENDIENTE,
+            Vencimiento.fecha_vencimiento >= hoy,
+            Vencimiento.fecha_vencimiento <= fecha_limite
+        ).order_by(Vencimiento.fecha_vencimiento.asc()).all()
+    
+    @staticmethod
+    def get_vencidos(db, business_id):
+        """Get vencimientos vencidos."""
+        from datetime import datetime
+        hoy = datetime.now()
+        
+        return db.query(Vencimiento).filter(
+            Vencimiento.business_id == business_id,
+            Vencimiento.status == VencimientoStatus.PENDIENTE,
+            Vencimiento.fecha_vencimiento < hoy
+        ).order_by(Vencimiento.fecha_vencimiento.desc()).all()
+    
+    @staticmethod
+    def get_by_date_range(db, business_id, fecha_inicio, fecha_fin, skip=0, limit=100):
+        """Get vencimientos by date range."""
+        return db.query(Vencimiento).filter(
+            Vencimiento.business_id == business_id,
+            Vencimiento.fecha_vencimiento >= fecha_inicio,
+            Vencimiento.fecha_vencimiento <= fecha_fin
+        ).order_by(Vencimiento.fecha_vencimiento.asc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def update(db, vencimiento_id, update_data):
+        """Update vencimiento."""
+        db_vencimiento = db.query(Vencimiento).filter(Vencimiento.id == vencimiento_id).first()
+        if db_vencimiento:
+            for field, value in update_data.items():
+                setattr(db_vencimiento, field, value)
+            db.commit()
+            db.refresh(db_vencimiento)
+        return db_vencimiento
+    
+    @staticmethod
+    def marcar_pagado(db, vencimiento_id, fecha_pago=None):
+        """Marcar vencimiento como pagado."""
+        from datetime import datetime
+        db_vencimiento = db.query(Vencimiento).filter(Vencimiento.id == vencimiento_id).first()
+        if db_vencimiento:
+            db_vencimiento.status = VencimientoStatus.PAGADO
+            db_vencimiento.fecha_pago = fecha_pago or datetime.now()
+            db.commit()
+            db.refresh(db_vencimiento)
+        return db_vencimiento
+    
+    @staticmethod
+    def delete(db, vencimiento_id):
+        """Delete vencimiento."""
+        db_vencimiento = db.query(Vencimiento).filter(Vencimiento.id == vencimiento_id).first()
+        if db_vencimiento:
+            db.delete(db_vencimiento)
+            db.commit()
+        return True
+
+class ChatHistoryCRUD:
+    """CRUD operations for ChatHistory model."""
+    
+    @staticmethod
+    def create(db, chat_data):
+        """Create a new chat history entry."""
+        db_chat = ChatHistory(**chat_data)
+        db.add(db_chat)
+        db.commit()
+        db.refresh(db_chat)
+        return db_chat
+    
+    @staticmethod
+    def get_by_id(db, chat_id):
+        """Get chat entry by ID."""
+        return db.query(ChatHistory).filter(ChatHistory.id == chat_id).first()
+    
+    @staticmethod
+    def get_user_history(db, user_id, limit=50, skip=0):
+        """Get chat history for a user."""
+        return db.query(ChatHistory).filter(
+            ChatHistory.user_id == user_id
+        ).order_by(ChatHistory.created_at.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_conversation(db, user_id, limit=20):
+        """Get recent conversation for context."""
+        chats = db.query(ChatHistory).filter(
+            ChatHistory.user_id == user_id
+        ).order_by(ChatHistory.created_at.desc()).limit(limit).all()
+        
+        return list(reversed(chats))
+    
+    @staticmethod
+    def delete_user_history(db, user_id):
+        """Delete all chat history for a user."""
+        db.query(ChatHistory).filter(ChatHistory.user_id == user_id).delete()
+        db.commit()
+        return True
+    
+    @staticmethod
+    def get_business_history(db, business_id, limit=100, skip=0):
+        """Get chat history for a business."""
+        return db.query(ChatHistory).filter(
+            ChatHistory.business_id == business_id
+        ).order_by(ChatHistory.created_at.desc()).offset(skip).limit(limit).all()
     

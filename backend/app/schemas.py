@@ -477,3 +477,274 @@ class PaymentWebhookData(BaseModel):
     live_mode: bool
     type: str
     user_id: str
+
+# ========================================
+# COMPROBANTE SCHEMAS
+# ========================================
+
+class ComprobanteTypeEnum(str, Enum):
+    FACTURA_A = "factura_a"
+    FACTURA_B = "factura_b"
+    FACTURA_C = "factura_c"
+    NOTA_CREDITO = "nota_credito"
+    NOTA_DEBITO = "nota_debito"
+    RECIBO = "recibo"
+    PRESUPUESTO = "presupuesto"
+
+class ComprobanteStatusEnum(str, Enum):
+    PENDIENTE = "pendiente"
+    PROCESADO = "procesado"
+    VALIDADO = "validado"
+    RECHAZADO = "rechazado"
+    ARCHIVADO = "archivado"
+
+class ComprobanteBase(BaseModel):
+    tipo: ComprobanteTypeEnum
+    numero: str
+    fecha_emision: datetime
+    fecha_vencimiento: Optional[datetime] = None
+    cuit_emisor: Optional[str] = None
+    razon_social_emisor: Optional[str] = None
+    subtotal: float = 0
+    iva: float = 0
+    total: float
+    moneda: str = "ARS"
+    notas: Optional[str] = None
+    
+    @field_validator('numero')
+    @classmethod
+    def validate_numero(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError("Número de comprobante debe tener al menos 3 caracteres")
+        return v
+    
+    @field_validator('cuit_emisor')
+    @classmethod
+    def validate_cuit(cls, v):
+        if v is not None:
+            v = v.replace("-", "").replace(" ", "")
+            if len(v) != 11 or not v.isdigit():
+                raise ValueError("CUIT debe tener 11 dígitos")
+        return v
+    
+    @field_validator('total')
+    @classmethod
+    def validate_total(cls, v):
+        if v < 0:
+            raise ValueError("Total no puede ser negativo")
+        return v
+
+class ComprobanteCreate(ComprobanteBase):
+    business_id: UUID
+
+class ComprobanteUpdate(BaseModel):
+    tipo: Optional[ComprobanteTypeEnum] = None
+    numero: Optional[str] = None
+    fecha_emision: Optional[datetime] = None
+    fecha_vencimiento: Optional[datetime] = None
+    cuit_emisor: Optional[str] = None
+    razon_social_emisor: Optional[str] = None
+    subtotal: Optional[float] = None
+    iva: Optional[float] = None
+    total: Optional[float] = None
+    moneda: Optional[str] = None
+    status: Optional[ComprobanteStatusEnum] = None
+    file_path: Optional[str] = None
+    file_url: Optional[str] = None
+    ocr_data: Optional[str] = None
+    notas: Optional[str] = None
+
+class ComprobanteInDBBase(ComprobanteBase):
+    id: UUID
+    business_id: UUID
+    user_id: UUID
+    status: ComprobanteStatusEnum
+    file_path: Optional[str] = None
+    file_url: Optional[str] = None
+    ocr_data: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+        use_enum_values = True
+
+class Comprobante(ComprobanteInDBBase):
+    pass
+
+class ComprobanteInDB(ComprobanteInDBBase):
+    pass
+
+# ========================================
+# VENCIMIENTO SCHEMAS
+# ========================================
+
+class VencimientoTypeEnum(str, Enum):
+    IMPUESTO = "impuesto"
+    SERVICIO = "servicio"
+    ALQUILER = "alquiler"
+    PROVEEDOR = "proveedor"
+    CREDITO = "credito"
+    SEGURO = "seguro"
+    OTRO = "otro"
+
+class VencimientoStatusEnum(str, Enum):
+    PENDIENTE = "pendiente"
+    PAGADO = "pagado"
+    VENCIDO = "vencido"
+    CANCELADO = "cancelado"
+
+class VencimientoBase(BaseModel):
+    tipo: VencimientoTypeEnum
+    descripcion: str
+    monto: float
+    moneda: str = "ARS"
+    fecha_vencimiento: datetime
+    recordatorio_dias_antes: int = 7
+    notas: Optional[str] = None
+    
+    @field_validator('descripcion')
+    @classmethod
+    def validate_descripcion(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError("Descripción debe tener al menos 3 caracteres")
+        return v
+    
+    @field_validator('monto')
+    @classmethod
+    def validate_monto(cls, v):
+        if v < 0:
+            raise ValueError("Monto no puede ser negativo")
+        return v
+    
+    @field_validator('recordatorio_dias_antes')
+    @classmethod
+    def validate_recordatorio(cls, v):
+        if v < 0 or v > 365:
+            raise ValueError("Recordatorio debe estar entre 0 y 365 días")
+        return v
+
+class VencimientoCreate(VencimientoBase):
+    business_id: UUID
+    comprobante_id: Optional[UUID] = None
+
+class VencimientoUpdate(BaseModel):
+    tipo: Optional[VencimientoTypeEnum] = None
+    descripcion: Optional[str] = None
+    monto: Optional[float] = None
+    moneda: Optional[str] = None
+    fecha_vencimiento: Optional[datetime] = None
+    fecha_pago: Optional[datetime] = None
+    status: Optional[VencimientoStatusEnum] = None
+    recordatorio_dias_antes: Optional[int] = None
+    notificacion_enviada: Optional[bool] = None
+    notas: Optional[str] = None
+
+class VencimientoInDBBase(VencimientoBase):
+    id: UUID
+    business_id: UUID
+    comprobante_id: Optional[UUID] = None
+    fecha_pago: Optional[datetime] = None
+    status: VencimientoStatusEnum
+    notificacion_enviada: bool = False
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+        use_enum_values = True
+
+class Vencimiento(VencimientoInDBBase):
+    pass
+
+class VencimientoInDB(VencimientoInDBBase):
+    pass
+
+# ========================================
+# OCR SCHEMAS
+# ========================================
+
+class OCRExtractedData(BaseModel):
+    success: bool
+    tipo: Optional[str] = None
+    numero: Optional[str] = None
+    fecha_emision: Optional[str] = None
+    total: Optional[float] = None
+    subtotal: Optional[float] = None
+    iva: Optional[float] = None
+    cuit_emisor: Optional[str] = None
+    razon_social: Optional[str] = None
+    confidence: Optional[float] = None
+    raw_text: Optional[str] = None
+    file_format: Optional[str] = None
+    error: Optional[str] = None
+    mock: Optional[bool] = False
+    message: Optional[str] = None
+
+class OCRResponse(BaseModel):
+    success: bool
+    filename: str
+    file_size: int
+    processing_time: float
+    data: OCRExtractedData
+    saved_to_comprobante: bool = False
+    comprobante_id: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class OCRUploadResponse(BaseModel):
+    message: str
+    ocr_result: OCRResponse
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class ChatRequest(BaseModel):
+    message: str
+    business_id: Optional[str] = None
+    use_rag: bool = False
+    collection_name: Optional[str] = None
+
+class ChatResponse(BaseModel):
+    success: bool
+    response: str
+    user_id: Optional[str] = None
+    timestamp: str
+    tokens_used: Optional[Dict[str, int]] = None
+    model: Optional[str] = None
+    mock: bool = False
+    message: Optional[str] = None
+
+class ChatHistoryItem(BaseModel):
+    id: str
+    user_id: str
+    business_id: Optional[str] = None
+    role: str
+    content: str
+    tokens_used: int
+    model: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class ChatHistoryResponse(BaseModel):
+    success: bool
+    history: List[ChatHistoryItem]
+    count: int
+
+class AddDocumentRequest(BaseModel):
+    text: str
+    collection_name: str = "documents"
+    metadata: Optional[Dict[str, Any]] = None
+    business_id: Optional[str] = None
+
+class AddDocumentResponse(BaseModel):
+    success: bool
+    document_ids: List[str]
+    count: int
+    collection: str
+    mock: bool = False
+    message: Optional[str] = None

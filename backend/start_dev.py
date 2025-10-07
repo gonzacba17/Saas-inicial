@@ -23,7 +23,13 @@ def main():
     try:
         from app.core.config import settings
         print(f"✅ Entorno: {settings.environment}")
-        print(f"✅ Base de datos: SQLite - {settings.sqlite_file}")
+        
+        # Show database configuration
+        if os.getenv("USE_SQLITE", "false").lower() == "true":
+            print(f"✅ Base de datos: SQLite - {settings.sqlite_file}")
+        else:
+            print(f"✅ Base de datos: PostgreSQL - {settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}")
+        
         print(f"✅ Puerto: 8000")
         print(f"✅ Debug: {settings.debug}")
     except Exception as e:

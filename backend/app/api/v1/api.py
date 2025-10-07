@@ -8,6 +8,10 @@ from app.api.v1.analytics import router as analytics_router
 from app.api.v1.payments import router as payments_router
 from app.api.v1.ai import router as ai_router
 from app.api.v1.secrets import router as secrets_router
+from app.api.v1.comprobantes import router as comprobantes_router
+from app.api.v1.vencimientos import router as vencimientos_router
+from app.api.v1.ocr import router as ocr_router
+from app.api.v1.chatbot import router as chatbot_router
 
 api_router = APIRouter()
 
@@ -37,3 +41,15 @@ api_router.include_router(ai_router, prefix="/ai", tags=["ai-assistant"])
 
 # Secrets management endpoints (admin only)
 api_router.include_router(secrets_router, prefix="/secrets", tags=["secrets"])
+
+# Comprobantes (facturas, recibos) endpoints
+api_router.include_router(comprobantes_router, prefix="/comprobantes", tags=["comprobantes"])
+
+# Vencimientos (pagos pendientes) endpoints
+api_router.include_router(vencimientos_router, prefix="/vencimientos", tags=["vencimientos"])
+
+# OCR (invoice/receipt extraction) endpoints
+api_router.include_router(ocr_router, prefix="/ocr", tags=["OCR"])
+
+# Chatbot Advanced (LangChain + RAG) endpoints
+api_router.include_router(chatbot_router, prefix="/chatbot", tags=["chatbot"])

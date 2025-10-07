@@ -99,7 +99,7 @@ class Settings(BaseSettings):
     # ==============================================
     # CONFIGURACIÓN DE BASE DE DATOS SQLITE (DESARROLLO)
     # ==============================================
-    sqlite_file: str = os.getenv("SQLITE_FILE", "saas_cafeterias_local.db")
+    sqlite_file: str = os.getenv("SQLITE_FILE", "app/db/app.db")
 
     # Direct DATABASE_URL support
     database_url: Optional[str] = None
@@ -114,7 +114,11 @@ class Settings(BaseSettings):
         
         # Verificar si PostgreSQL está disponible, sino usar SQLite
         if os.getenv("USE_SQLITE", "false").lower() == "true":
-            return f"sqlite:///./{self.sqlite_file}"
+            # Convert Windows path to absolute path with forward slashes for SQLite URL
+            sqlite_path = self.sqlite_file.replace("\\", "/")
+            if not os.path.isabs(sqlite_path):
+                sqlite_path = os.path.abspath(sqlite_path).replace("\\", "/")
+            return f"sqlite:///{sqlite_path}"
         else:
             # Configuración para PostgreSQL con encoding UTF-8 completo
             return self._build_postgres_url()
