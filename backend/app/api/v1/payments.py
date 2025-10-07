@@ -2,6 +2,7 @@
 Payment management endpoints with MercadoPago integration and role-based access control.
 """
 import os
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
@@ -9,6 +10,8 @@ from uuid import UUID
 import json
 import hmac
 import hashlib
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from app.db.db import (
@@ -378,6 +381,8 @@ async def payment_webhook(
         
         return {"status": "ok"}
         
+    except HTTPException:
+        raise
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON in webhook")
     except Exception as e:

@@ -2,7 +2,7 @@
 Unified Pydantic schemas for all models.
 All data validation and serialization schemas consolidated in one file for simplicity.
 """
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, Field
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -235,8 +235,10 @@ class OrderItemBase(BaseModel):
     quantity: int
     unit_price: float
 
-class OrderItemCreate(OrderItemBase):
-    pass
+class OrderItemCreate(BaseModel):
+    product_id: UUID
+    quantity: int
+    unit_price: Optional[float] = None
 
 class OrderItem(OrderItemBase):
     id: UUID
@@ -436,7 +438,7 @@ class PaymentInDBBase(PaymentBase):
     transaction_amount: Optional[float] = None
     net_received_amount: Optional[float] = None
     total_paid_amount: Optional[float] = None
-    metadata: Optional[str] = None
+    metadata: Optional[str] = Field(None, alias="payment_metadata")
     webhook_data: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -444,6 +446,8 @@ class PaymentInDBBase(PaymentBase):
 
     class Config:
         from_attributes = True
+        use_enum_values = True
+        populate_by_name = True
 
 class Payment(PaymentInDBBase):
     pass

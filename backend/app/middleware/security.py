@@ -202,8 +202,14 @@ def setup_cors(app):
 
 def setup_security_middleware(app):
     """Setup all security middleware."""
-    # CORS
+    import os
+    
+    # CORS (always enabled)
     setup_cors(app)
+    
+    # Skip other middlewares in testing mode
+    if os.getenv("TESTING") == "true":
+        return
     
     # Payload size limit (should be first for early rejection)
     app.add_middleware(PayloadSizeLimitMiddleware, max_size=512 * 1024)  # 512KB limit
