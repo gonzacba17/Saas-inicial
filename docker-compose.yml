@@ -1,216 +1,162 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  db:
+  postgres:
     image: postgres:15-alpine
-    container_name: saas_db
+    container_name: saas-postgres
     environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-saas_cafeterias}
-      POSTGRES_USER: ${POSTGRES_USER:-saasuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-saaspass}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
-    networks:
-      - saas-network
-    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-saasuser} -d ${POSTGRES_DB:-saas_cafeterias}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # Redis for Celery and Caching
-  redis:
-    image: redis:7-alpine
-    container_name: saas_redis
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-    volumes:
-      - redis_data:/data
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    restart: unless-stopped
     networks:
       - saas-network
-    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: saas-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
-      timeout: 5s
+      timeout: 3s
       retries: 5
+    restart: unless-stopped
+    networks:
+      - saas-network
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-      args:
-        - ENVIRONMENT=${ENVIRONMENT:-development}
-    container_name: saas_backend
+      target: runtime
+    container_name: saas-backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file:
+      - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-saasuser}:${POSTGRES_PASSWORD:-saaspass}@db:5432/${POSTGRES_DB:-saas_cafeterias}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-saas_cafeterias}
       - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - SECRET_KEY=${SECRET_KEY}
-      - MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - ./backend:/app
-      - backend_logs:/app/logs
+      - backend_uploads:/app/uploads
+      - backend_chroma:/app/chroma_db
     ports:
       - "${BACKEND_PORT:-8000}:8000"
-    networks:
-      - saas-network
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    command: >
-      sh -c "
-        alembic upgrade head &&
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-      "
+    networks:
+      - saas-network
+    profiles:
+      - dev
 
-  # Celery Worker
-  celery-worker:
+  worker:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-      args:
-        - ENVIRONMENT=${ENVIRONMENT:-development}
-    container_name: saas_celery_worker
+      target: worker
+    container_name: saas-worker
+    env_file:
+      - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-saasuser}:${POSTGRES_PASSWORD:-saaspass}@db:5432/${POSTGRES_DB:-saas_cafeterias}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-saas_cafeterias}
       - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - SECRET_KEY=${SECRET_KEY}
-      - MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - ./backend:/app
-      - backend_logs:/app/logs
+      - backend_uploads:/app/uploads
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
     networks:
       - saas-network
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    command: celery -A app.services_directory.celery_app worker --loglevel=info --concurrency=2
+    profiles:
+      - dev
 
-  # Celery Beat (Scheduler)
-  celery-beat:
+  beat:
     build:
       context: ./backend
-      dockerfile: Dockerfile
-      args:
-        - ENVIRONMENT=${ENVIRONMENT:-development}
-    container_name: saas_celery_beat
+      target: beat
+    container_name: saas-beat
+    env_file:
+      - ./backend/.env
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-saasuser}:${POSTGRES_PASSWORD:-saaspass}@db:5432/${POSTGRES_DB:-saas_cafeterias}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-saas_cafeterias}
       - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - SECRET_KEY=${SECRET_KEY}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     volumes:
       - ./backend:/app
-      - backend_logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
     networks:
       - saas-network
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    command: celery -A app.services_directory.celery_app beat --loglevel=info
+    profiles:
+      - dev
 
-  # Celery Flower (Monitoring)
-  flower:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      args:
-        - ENVIRONMENT=${ENVIRONMENT:-development}
-    container_name: saas_flower
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/1
-      - CELERY_RESULT_BACKEND=redis://redis:6379/2
-    ports:
-      - "${FLOWER_PORT:-5555}:5555"
-    networks:
-      - saas-network
-    depends_on:
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    command: celery -A app.services_directory.celery_app flower --port=5555
-
-  # React Frontend
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - ENVIRONMENT=${ENVIRONMENT:-development}
-    container_name: saas_frontend
-    environment:
-      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
-      - VITE_ENVIRONMENT=${ENVIRONMENT:-development}
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      target: runtime
+    container_name: saas-frontend
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
-    networks:
-      - saas-network
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       - backend
     restart: unless-stopped
-    command: npm run dev
-
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: saas_nginx
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/sites-enabled:/etc/nginx/sites-enabled
-      - nginx_logs:/var/log/nginx
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
     networks:
       - saas-network
+    profiles:
+      - dev
+
+  nginx:
+    image: nginx:alpine
+    container_name: saas-nginx
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
     depends_on:
       - backend
       - frontend
     restart: unless-stopped
+    networks:
+      - saas-network
+    profiles:
+      - prod
+      - staging
 
 volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  backend_logs:
-    driver: local
-  nginx_logs:
-    driver: local
+  pgdata:
+  redisdata:
+  backend_uploads:
+  backend_chroma:
 
 networks:
   saas-network:

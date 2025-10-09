@@ -12,6 +12,7 @@ from app.api.v1.comprobantes import router as comprobantes_router
 from app.api.v1.vencimientos import router as vencimientos_router
 from app.api.v1.ocr import router as ocr_router
 from app.api.v1.chatbot import router as chatbot_router
+from app.api.v1.notifications import router as notifications_router
 
 api_router = APIRouter()
 
@@ -53,3 +54,6 @@ api_router.include_router(ocr_router, prefix="/ocr", tags=["OCR"])
 
 # Chatbot Advanced (LangChain + RAG) endpoints
 api_router.include_router(chatbot_router, prefix="/chatbot", tags=["chatbot"])
+
+# Notifications (Email + Push + Celery) endpoints
+api_router.include_router(notifications_router, prefix="/notifications", tags=["notifications"])

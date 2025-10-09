@@ -15,7 +15,7 @@ from app.api.v1.auth import get_current_user
 router = APIRouter()
 
 @router.post("/", response_model=Comprobante, status_code=status.HTTP_201_CREATED)
-def create_comprobante(
+async def create_comprobante(
     comprobante: ComprobanteCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -33,6 +33,27 @@ def create_comprobante(
         comprobante_data['user_id'] = current_user.id
         
         db_comprobante = ComprobanteCRUD.create(db, comprobante_data)
+        
+        try:
+            from app.tasks.notification_tasks import send_comprobante_notification_task
+            
+            comprobante_dict = {
+                "id": str(db_comprobante.id),
+                "tipo": db_comprobante.tipo.value,
+                "numero": db_comprobante.numero,
+                "total": db_comprobante.total,
+                "fecha_emision": db_comprobante.fecha_emision.isoformat()
+            }
+            
+            send_comprobante_notification_task.delay(
+                comprobante=comprobante_dict,
+                user_email=current_user.email,
+                user_id=str(current_user.id),
+                user_name=current_user.username
+            )
+        except Exception as notif_error:
+            pass
+        
         return db_comprobante
     except Exception as e:
         raise HTTPException(

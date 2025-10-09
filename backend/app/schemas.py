@@ -748,3 +748,54 @@ class AddDocumentResponse(BaseModel):
     collection: str
     mock: bool = False
     message: Optional[str] = None
+
+class NotificationEventType(str, Enum):
+    COMPROBANTE_CREATED = "comprobante_created"
+    VENCIMIENTO_PROXIMO = "vencimiento_proximo"
+    VENCIMIENTO_VENCIDO = "vencimiento_vencido"
+    CHATBOT_INSIGHT = "chatbot_insight"
+    DAILY_SUMMARY = "daily_summary"
+    WEEKLY_REPORT = "weekly_report"
+    SYSTEM_ALERT = "system_alert"
+
+class NotificationChannel(str, Enum):
+    EMAIL = "email"
+    PUSH = "push"
+    BOTH = "both"
+
+class NotificationEvent(BaseModel):
+    event_type: NotificationEventType
+    payload: Dict[str, Any]
+    user_email: str
+    user_id: str
+    user_name: str
+    channel: NotificationChannel = NotificationChannel.BOTH
+
+class NotificationResponse(BaseModel):
+    success: bool
+    event_type: str
+    user_id: str
+    timestamp: str
+    email_sent: bool
+    push_sent: bool
+    email_result: Optional[Dict[str, Any]] = None
+    push_result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+class EmailTemplate(BaseModel):
+    name: str
+    subject: str
+    description: str
+    variables: List[str]
+
+class TestNotificationRequest(BaseModel):
+    recipient_email: str
+    notification_type: NotificationEventType
+    test_data: Optional[Dict[str, Any]] = None
+
+class NotificationStatusResponse(BaseModel):
+    email_service_available: bool
+    push_service_available: bool
+    celery_worker_active: bool
+    templates_loaded: int
+    message: str
