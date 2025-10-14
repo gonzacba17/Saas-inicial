@@ -112,13 +112,16 @@ python create_admin.py
 
 ### 🎯 Credenciales de Desarrollo
 
-```
-Email: admin@saas.test
-Password: Admin1234!
-Rol: admin (permisos completos)
+Para crear un usuario administrador:
+
+```bash
+cd backend
+python create_admin.py
 ```
 
-> ⚠️ **SOLO para desarrollo local** - Cambiar en producción
+El script te pedirá email y contraseña de forma interactiva. Las credenciales se configuran de forma segura sin exponerlas en el código.
+
+> ⚠️ **IMPORTANTE**: Nunca uses credenciales por defecto en producción. Genera contraseñas fuertes únicas para cada entorno.
 
 ---
 

@@ -136,9 +136,29 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        
+        # HSTS header - only in production with HTTPS
+        if settings.environment == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        
+        # CSP header - adjust based on your needs
+        csp_directives = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  # Adjust for your frontend needs
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: https:",
+            "font-src 'self' data:",
+            "connect-src 'self'",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'"
+        ]
+        response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
+        
+        # Permissions Policy (formerly Feature-Policy)
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
         
         return response
 
@@ -217,6 +237,11 @@ def setup_security_middleware(app):
     # Input validation (should be first for early rejection)
     from app.middleware.validation import ValidationMiddleware
     app.add_middleware(ValidationMiddleware)
+    
+    # CSRF protection (for production)
+    if settings.environment == "production":
+        from app.middleware.csrf import CSRFMiddleware
+        app.add_middleware(CSRFMiddleware)
     
     # Rate limiting
     app.add_middleware(RateLimitMiddleware, calls=100, period=3600)  # 100 requests per hour

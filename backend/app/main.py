@@ -123,6 +123,18 @@ def health_check_db():
 # Setup error handling (debe ir primero)
 setup_error_handlers(app, debug=settings.debug)
 
+# Force HTTPS in production
+if settings.environment == "production":
+    from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
+    from fastapi.middleware.trustedhost import TrustedHostMiddleware
+    
+    app.add_middleware(HTTPSRedirectMiddleware)
+    
+    # Add trusted host middleware if configured
+    allowed_hosts = os.getenv("ALLOWED_HOSTS", "").split(",")
+    if allowed_hosts and allowed_hosts[0]:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
+
 # Setup rate limiting middleware
 from app.middleware.rate_limiter import RateLimitMiddleware
 rate_limit_enabled = settings.environment == "production" or os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
