@@ -3,7 +3,7 @@ Unified Pydantic schemas for all models.
 All data validation and serialization schemas consolidated in one file for simplicity.
 """
 from pydantic import BaseModel, EmailStr, field_validator, Field
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from uuid import UUID
 from datetime import datetime
 from enum import Enum

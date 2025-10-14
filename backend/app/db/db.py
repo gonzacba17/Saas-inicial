@@ -481,7 +481,7 @@ class ChatHistory(Base):
     content = Column(Text, nullable=False)
     tokens_used = Column(Integer, default=0)
     model = Column(String, default="gpt-4")
-    metadata = Column(Text)
+    chat_metadata = Column(Text)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     user = relationship("User")
