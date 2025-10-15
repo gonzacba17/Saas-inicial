@@ -1,0 +1,308 @@
+groups:
+  - name: production_alerts
+    interval: 30s
+    rules:
+      - alert: APIDown
+        expr: up{job="backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+          team: devops
+        annotations:
+          summary: "API Backend está caído"
+          description: "El backend {{ $labels.instance }} está down por más de 2 minutos."
+          runbook_url: "https://docs.tu-dominio.com/runbooks/api-down"
+          dashboard_url: "https://grafana.tu-dominio.com/d/api-health"
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (instance)
+            /
+            sum(rate(http_requests_total[5m])) by (instance)
+          ) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          component: backend
+          team: backend-dev
+        annotations:
+          summary: "Tasa de errores alta en API"
+          description: "La tasa de errores es {{ $value | humanizePercentage }} en {{ $labels.instance }}."
+          impact: "Los usuarios están experimentando errores al usar la aplicación"
+          action_required: "Revisar logs de errores y considerar rollback si es necesario"
+
+      - alert: SlowResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, instance)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: backend
+          team: backend-dev
+        annotations:
+          summary: "Response time P95 degradado"
+          description: "El P95 de response time es {{ $value }}s en {{ $labels.instance }} (objetivo: < 1s)."
+          possible_causes: "Carga alta, queries lentas, servicios externos lentos"
+          action_required: "Revisar performance dashboard y slow query logs"
+
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+          team: devops
+        annotations:
+          summary: "Conexiones a base de datos altas"
+          description: "{{ $value }} conexiones activas en PostgreSQL (límite: 100)."
+          action_required: "Verificar connection leaks en la aplicación"
+
+      - alert: DatabaseConnectionsFull
+        expr: pg_stat_activity_count >= 95
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+          team: devops
+        annotations:
+          summary: "Pool de conexiones casi lleno"
+          description: "{{ $value }} conexiones activas, cerca del límite de 100."
+          impact: "La aplicación comenzará a rechazar requests por falta de conexiones"
+          action_required: "Aumentar límite de conexiones o escalar aplicación"
+
+      - alert: DiskSpaceLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} 
+          / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+          team: devops
+        annotations:
+          summary: "Espacio en disco bajo"
+          description: "Solo {{ $value | humanizePercentage }} de espacio disponible en {{ $labels.instance }}."
+          action_required: "Limpiar logs antiguos, archivos temporales, o expandir disco"
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/"} 
+          / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 5
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+          team: devops
+        annotations:
+          summary: "Espacio en disco crítico"
+          description: "Solo {{ $value | humanizePercentage }} de espacio disponible."
+          impact: "El sistema puede fallar en minutos"
+          action_required: "Limpieza inmediata o expansión de disco"
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+          team: devops
+        annotations:
+          summary: "Uso de memoria alto"
+          description: "Uso de memoria en {{ $value | humanizePercentage }} en {{ $labels.instance }}."
+          action_required: "Identificar proceso consumiendo memoria o escalar"
+
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: infrastructure
+          team: devops
+        annotations:
+          summary: "Uso de CPU alto"
+          description: "CPU usage en {{ $value | humanizePercentage }} en {{ $labels.instance }}."
+          action_required: "Identificar proceso consumiendo CPU o escalar"
+
+      - alert: ContainerDown
+        expr: |
+          time() - container_last_seen{name=~"saas-(backend|frontend|worker|beat)-prod"} > 60
+        for: 2m
+        labels:
+          severity: critical
+          component: docker
+          team: devops
+        annotations:
+          summary: "Contenedor {{ $labels.name }} está caído"
+          description: "El contenedor {{ $labels.name }} no ha sido visto en {{ $value }}s."
+          action_required: "Revisar logs del contenedor y reiniciar si es necesario"
+
+      - alert: ContainerRestarting
+        expr: |
+          rate(container_restart_count{name=~"saas-(backend|frontend|worker|beat)-prod"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: docker
+          team: devops
+        annotations:
+          summary: "Contenedor {{ $labels.name }} reiniciando frecuentemente"
+          description: "El contenedor ha reiniciado {{ $value }} veces en los últimos 15min."
+          action_required: "Revisar logs y health checks del contenedor"
+
+      - alert: RedisDown
+        expr: redis_up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: redis
+          team: devops
+        annotations:
+          summary: "Redis está caído"
+          description: "Redis en {{ $labels.instance }} está down."
+          impact: "Cache y Celery tasks no funcionarán"
+          action_required: "Reiniciar Redis y verificar persistencia de datos"
+
+      - alert: RedisMemoryHigh
+        expr: |
+          (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+          team: devops
+        annotations:
+          summary: "Memoria de Redis alta"
+          description: "Redis está usando {{ $value | humanizePercentage }} de memoria disponible."
+          action_required: "Revisar política de eviction o aumentar memoria"
+
+      - alert: CeleryWorkerDown
+        expr: |
+          sum(celery_worker_up) by (instance) == 0
+        for: 3m
+        labels:
+          severity: critical
+          component: celery
+          team: backend-dev
+        annotations:
+          summary: "Celery worker está caído"
+          description: "No hay workers de Celery activos en {{ $labels.instance }}."
+          impact: "Tasks asíncronas no se procesarán"
+          action_required: "Reiniciar worker y verificar configuración"
+
+      - alert: CeleryQueueBacklog
+        expr: |
+          celery_queue_length{queue="default"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: celery
+          team: backend-dev
+        annotations:
+          summary: "Cola de Celery con backlog"
+          description: "{{ $value }} tasks pendientes en queue {{ $labels.queue }}."
+          action_required: "Escalar workers o investigar tasks lentas"
+
+      - alert: FailedLoginAttempts
+        expr: |
+          rate(security_events_total{event="login_failure"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+          team: security
+        annotations:
+          summary: "Intentos de login fallidos elevados"
+          description: "{{ $value }} intentos de login fallidos por segundo."
+          possible_attack: "Posible ataque de fuerza bruta"
+          action_required: "Revisar logs de seguridad y considerar bloqueo de IPs"
+
+      - alert: UnauthorizedAccessAttempts
+        expr: |
+          rate(http_requests_total{status="401"}[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+          team: security
+        annotations:
+          summary: "Intentos de acceso no autorizado"
+          description: "{{ $value }} requests 401 por segundo."
+          action_required: "Revisar logs de seguridad"
+
+      - alert: SSLCertificateExpiringSoon
+        expr: |
+          (ssl_certificate_expiry_seconds - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          component: infrastructure
+          team: devops
+        annotations:
+          summary: "Certificado SSL por vencer"
+          description: "El certificado SSL vence en {{ $value }} días."
+          action_required: "Renovar certificado SSL antes del vencimiento"
+
+      - alert: SSLCertificateExpiring
+        expr: |
+          (ssl_certificate_expiry_seconds - time()) / 86400 < 7
+        for: 1h
+        labels:
+          severity: critical
+          component: infrastructure
+          team: devops
+        annotations:
+          summary: "Certificado SSL vence pronto"
+          description: "El certificado SSL vence en {{ $value }} días."
+          impact: "El sitio será inaccesible después del vencimiento"
+          action_required: "URGENTE: Renovar certificado SSL inmediatamente"
+
+      - alert: BackupFailed
+        expr: |
+          time() - last_successful_backup_timestamp > 86400 * 2
+        for: 1h
+        labels:
+          severity: critical
+          component: backup
+          team: devops
+        annotations:
+          summary: "Backup no ejecutado en 2 días"
+          description: "El último backup exitoso fue hace {{ $value | humanizeDuration }}."
+          impact: "Riesgo de pérdida de datos"
+          action_required: "Verificar sistema de backups y ejecutar manualmente"
+
+      - alert: HighPaymentFailureRate
+        expr: |
+          (
+            sum(rate(payments_total{status="failed"}[10m]))
+            /
+            sum(rate(payments_total[10m]))
+          ) * 100 > 10
+        for: 10m
+        labels:
+          severity: critical
+          component: payments
+          team: backend-dev
+        annotations:
+          summary: "Tasa de fallos de pagos alta"
+          description: "{{ $value | humanizePercentage }} de pagos están fallando."
+          impact: "Pérdida de revenue"
+          action_required: "Verificar integración con MercadoPago y logs de errores"
+
+      - alert: WebhookDeliveryFailure
+        expr: |
+          rate(webhook_delivery_failures_total[10m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: webhooks
+          team: backend-dev
+        annotations:
+          summary: "Webhooks fallando"
+          description: "{{ $value }} webhooks fallando por minuto."
+          action_required: "Verificar conectividad con MercadoPago"
