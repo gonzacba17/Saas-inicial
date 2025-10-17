@@ -6,7 +6,7 @@ from app.api.v1.products import router as products_router
 from app.api.v1.orders import router as orders_router
 from app.api.v1.analytics import router as analytics_router
 from app.api.v1.payments import router as payments_router
-from app.api.v1.ai import router as ai_router
+# from app.api.v1.ai import router as ai_router
 from app.api.v1.secrets import router as secrets_router
 from app.api.v1.comprobantes import router as comprobantes_router
 from app.api.v1.vencimientos import router as vencimientos_router
@@ -38,7 +38,7 @@ api_router.include_router(analytics_router, prefix="/analytics", tags=["analytic
 api_router.include_router(payments_router, prefix="/payments", tags=["payments"])
 
 # AI assistant endpoints
-api_router.include_router(ai_router, prefix="/ai", tags=["ai-assistant"])
+# api_router.include_router(ai_router, prefix="/ai", tags=["ai-assistant"])
 
 # Secrets management endpoints (admin only)
 api_router.include_router(secrets_router, prefix="/secrets", tags=["secrets"])

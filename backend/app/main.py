@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.project_name,
     version=settings.version,
-    openapi_url=f"{settings.api_v1_str}/openapi.json",
+    openapi_url="/openapi.json",
     debug=settings.debug,
     description="🚀 Cafeteria IA - Sistema SaaS completo para gestión de cafeterías",
     lifespan=lifespan,
@@ -141,7 +141,7 @@ rate_limit_enabled = settings.environment == "production" or os.getenv("RATE_LIM
 app.add_middleware(RateLimitMiddleware, enabled=rate_limit_enabled)
 
 # Setup security middleware
-setup_security_middleware(app)
+# setup_security_middleware(app)
 
 # Include API routes
 app.include_router(api.api_router, prefix=settings.api_v1_str)

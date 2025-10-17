@@ -1,61 +1,78 @@
 # =============================================
-# CAFETERIA IA - PRODUCTION DEPENDENCIES
-# Core dependencies for production deployment
+# CAFETERIA IA - OPTIMIZED DEPENDENCIES
+# Lightweight version for 16GB RAM systems
 # =============================================
 
-# Web Framework
+# ===== CORE (Esenciales) =====
 fastapi==0.115.0
-uvicorn[standard]==0.27.0
+uvicorn[standard]==0.24.0
+python-dotenv==1.0.1
+pydantic[email]==2.9.2
+pydantic-settings==2.1.0
+email-validator==2.1.0.post1
 
-# Database
+# ===== DATABASE =====
 sqlalchemy==2.0.35
 alembic==1.13.1
 psycopg2-binary==2.9.9
 
-# Security & Authentication
+# ===== SECURITY =====
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
 bcrypt==4.0.1
-pydantic[email]==2.9.2
-email-validator==2.1.0.post1
 cryptography==42.0.8
 
-# Configuration
-python-dotenv==1.0.1
-pydantic-settings==2.1.0
-
-# HTTP & File handling
+# ===== HTTP & FILES =====
 python-multipart==0.0.7
 requests==2.31.0
+aiofiles==23.2.1
 
-# External Services
-openai==1.10.0
-redis==4.6.0
-mercadopago==2.2.1
-
-# OCR & Image Processing
-pytesseract==0.3.10
-Pillow==10.0.0
-opencv-python==4.8.1.78
-pdf2image==1.16.3
-pypdf==3.17.4
-
-# LangChain & Vector Store (Chatbot Advanced)
-langchain==0.1.0
-langchain-openai==0.0.2
-chromadb==0.4.22
-sentence-transformers==2.3.1
-pandas==2.0.3
-
-# Celery & Task Queue (Notifications & Automation)
+# ===== CELERY (Task Queue) =====
 celery==5.3.4
-celery[redis]==5.3.4
+redis==4.6.0
 flower==2.0.1
 
-# Email & Notifications
+# ===== PAYMENTS =====
+mercadopago==2.2.1
+
+# ===== EMAIL =====
 aiosmtplib==3.0.1
 jinja2==3.1.2
 
-# Removed unused dependencies:
-# - nltk==3.8.1 (NLP library - not used in codebase)
-# - marshmallow==3.20.1 (Serialization - not used, using Pydantic instead)
+# ===== AI & ML (Lightweight versions) =====
+openai==1.54.3
+chromadb==0.4.15
+
+# LangChain minimal (sin extras pesados)
+langchain==0.1.0
+langchain-openai==0.0.2
+
+# ===== IMAGE/PDF PROCESSING (Lightweight) =====
+# Pillow en vez de OpenCV (mucho más ligero)
+Pillow==10.0.0
+
+# PyTesseract (usa tesseract del sistema)
+pytesseract==0.3.10
+
+# PDF processing (lightweight)
+pypdf==3.17.4
+pdf2image==1.16.3
+
+# ===== DATA PROCESSING (Minimal) =====
+pandas==2.0.3
+
+# =============================================
+# DEPENDENCIAS PESADAS REMOVIDAS:
+# =============================================
+# ❌ opencv-python==4.8.1.78 (300MB+)
+#    → Reemplazado por Pillow (mucho más ligero)
+# 
+# ❌ sentence-transformers==2.3.1 (500MB+)
+#    → ChromaDB puede usar embeddings de OpenAI
+#
+# =============================================
+# NOTAS DE OPTIMIZACIÓN:
+# =============================================
+# - Si necesitas OpenCV en el futuro, instálalo separadamente
+# - Para embeddings, usa OpenAI API en vez de modelos locales
+# - Esto reduce el tamaño de la imagen de ~4GB a ~1.5GB

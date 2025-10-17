@@ -2,8 +2,19 @@
 Security middleware for rate limiting, CORS, and other security features.
 """
 import time
-import redis
-from typing import Dict, Optional
+from typing import Dict, Optional, TYPE_CHECKING
+import importlib
+
+# Allow type checkers to import redis for typing, but import redis at runtime dynamically
+if TYPE_CHECKING:
+    import redis  # type: ignore
+
+try:
+    redis = importlib.import_module("redis")
+except Exception:
+    # Redis is optional; if unavailable, code will fall back to in-memory rate limiting
+    redis = None  # type: ignore
+
 from fastapi import Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -122,45 +133,57 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_data["count"] += 1
         return False
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add security headers to responses."""
+    """Middleware that sets common security headers including CSP."""
     
+    def __init__(self, app, csp: Optional[list] = None, hsts: Optional[str] = "max-age=31536000; includeSubDomains"):
+        super().__init__(app)
+        self.csp = csp
+        self.hsts = hsts
+
     async def dispatch(self, request: Request, call_next):
         # Skip security headers in testing mode or for ultra-fast health endpoints
         if settings.testing or request.url.path in ["/health", "/readyz"]:
             return await call_next(request)
+        
+        # Skip ALL security headers for /docs in development
+        if settings.environment == "development" and "/docs" in request.url.path:
+            return await call_next(request)
             
         response = await call_next(request)
-        
-        # Add security headers
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        
-        # HSTS header - only in production with HTTPS
-        if settings.environment == "production":
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
-        
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        
-        # CSP header - adjust based on your needs
-        csp_directives = [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  # Adjust for your frontend needs
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: https:",
-            "font-src 'self' data:",
-            "connect-src 'self'",
-            "frame-ancestors 'none'",
-            "base-uri 'self'",
-            "form-action 'self'"
-        ]
-        response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
-        
-        # Permissions Policy (formerly Feature-Policy)
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        
+
+        # Ensure headers can be modified
+        try:
+            # Other recommended security headers
+            response.headers.setdefault("X-Frame-Options", "DENY")
+            response.headers.setdefault("X-Content-Type-Options", "nosniff")
+            response.headers.setdefault("Referrer-Policy", "no-referrer-when-downgrade")
+            response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=()")
+            
+            # Content Security Policy - permisivo para Swagger UI
+            csp_directives = [
+                "default-src 'self'",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+                "img-src 'self' data: https:",
+                "font-src 'self' data:",
+                "connect-src 'self'",
+                "frame-ancestors 'none'",
+                "base-uri 'self'",
+                "form-action 'self'"
+            ]
+            response.headers["Content-Security-Policy"] = "; ".join(csp_directives)
+            
+            # HSTS should ideally only be sent over HTTPS in production
+            if settings.environment == "production":
+                response.headers.setdefault("Strict-Transport-Security", self.hsts)
+        except Exception:
+            # If for any reason headers cannot be set, continue without raising
+            pass
+
         return response
+
 
 class PayloadSizeLimitMiddleware(BaseHTTPMiddleware):
     """Middleware to limit request payload size."""
@@ -200,6 +223,7 @@ class PayloadSizeLimitMiddleware(BaseHTTPMiddleware):
         
         return await call_next(request)
 
+
 def setup_cors(app):
     """Setup CORS middleware."""
     origins = [
@@ -219,6 +243,7 @@ def setup_cors(app):
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
+
 
 def setup_security_middleware(app):
     """Setup all security middleware."""
