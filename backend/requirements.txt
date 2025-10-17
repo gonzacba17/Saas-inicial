@@ -30,7 +30,7 @@ requests==2.31.0
 
 # External Services
 openai==1.10.0
-redis==5.0.1
+redis==4.6.0
 mercadopago==2.2.1
 
 # OCR & Image Processing
@@ -45,6 +45,7 @@ langchain==0.1.0
 langchain-openai==0.0.2
 chromadb==0.4.22
 sentence-transformers==2.3.1
+pandas==2.0.3
 
 # Celery & Task Queue (Notifications & Automation)
 celery==5.3.4

@@ -207,7 +207,7 @@ services:
   frontend:
     build:
       context: ./frontend
-      target: production
+      target: runtime
       args:
         - VITE_API_URL=${VITE_API_URL:-https://api.tu-dominio.com}
     container_name: saas-frontend-prod

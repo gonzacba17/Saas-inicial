@@ -1261,4 +1261,69 @@ class ChatHistoryCRUD:
         return db.query(ChatHistory).filter(
             ChatHistory.business_id == business_id
         ).order_by(ChatHistory.created_at.desc()).offset(skip).limit(limit).all()
+
+
+class AIAuditLog(Base):
+    __tablename__ = "ai_audit_logs"
+    
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, index=True)
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    business_id = Column(GUID(), ForeignKey("businesses.id"), nullable=True)
+    model_name = Column(String(100), nullable=False)
+    prompt = Column(Text, nullable=False)
+    response = Column(Text, nullable=False)
+    tokens_used = Column(Integer, default=0)
+    response_time_ms = Column(Integer, default=0)
+    endpoint = Column(String(200), nullable=True)
+    status = Column(String(50), default="success")
+    error_message = Column(Text, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    
+    user = relationship("User")
+    business = relationship("Business")
+
+
+class AIAuditLogCRUD:
+    
+    @staticmethod
+    def create(db, log_data):
+        db_log = AIAuditLog(**log_data)
+        db.add(db_log)
+        db.commit()
+        db.refresh(db_log)
+        return db_log
+    
+    @staticmethod
+    def get_by_business(db, business_id, skip=0, limit=100):
+        return db.query(AIAuditLog).filter(
+            AIAuditLog.business_id == business_id
+        ).order_by(AIAuditLog.timestamp.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_by_user(db, user_id, skip=0, limit=100):
+        return db.query(AIAuditLog).filter(
+            AIAuditLog.user_id == user_id
+        ).order_by(AIAuditLog.timestamp.desc()).offset(skip).limit(limit).all()
+    
+    @staticmethod
+    def get_usage_stats(db, business_id=None, user_id=None):
+        from sqlalchemy import func
+        
+        query = db.query(
+            func.count(AIAuditLog.id).label('total_requests'),
+            func.sum(AIAuditLog.tokens_used).label('total_tokens'),
+            func.avg(AIAuditLog.response_time_ms).label('avg_response_time')
+        )
+        
+        if business_id:
+            query = query.filter(AIAuditLog.business_id == business_id)
+        if user_id:
+            query = query.filter(AIAuditLog.user_id == user_id)
+        
+        result = query.first()
+        return {
+            "total_requests": result.total_requests or 0,
+            "total_tokens": result.total_tokens or 0,
+            "avg_response_time": float(result.avg_response_time or 0)
+        }
     

@@ -173,7 +173,6 @@ def get_usage_stats(
     current_user: UserSchema = Depends(get_current_user)
 ):
     """Get AI usage statistics for current user or specific business."""
-    # If business_id is provided, check permissions
     if business_id:
         business = db.query(Business).filter(Business.id == business_id).first()
         if not business:
@@ -183,6 +182,49 @@ def get_usage_stats(
     
     stats = AIConversationCRUD.get_usage_stats(db, current_user.id, business_id)
     return stats
+
+@router.get("/jobs/{job_id}")
+def get_job_status(
+    job_id: str,
+    current_user: UserSchema = Depends(get_current_user)
+):
+    """Get status of async AI job."""
+    from celery.result import AsyncResult
+    
+    task = AsyncResult(job_id)
+    
+    if task.state == 'PENDING':
+        response = {
+            'job_id': job_id,
+            'status': 'pending',
+            'message': 'Task is waiting to be processed'
+        }
+    elif task.state == 'STARTED':
+        response = {
+            'job_id': job_id,
+            'status': 'processing',
+            'message': 'Task is being processed'
+        }
+    elif task.state == 'SUCCESS':
+        response = {
+            'job_id': job_id,
+            'status': 'completed',
+            'result': task.result
+        }
+    elif task.state == 'FAILURE':
+        response = {
+            'job_id': job_id,
+            'status': 'failed',
+            'error': str(task.info)
+        }
+    else:
+        response = {
+            'job_id': job_id,
+            'status': task.state.lower(),
+            'info': str(task.info)
+        }
+    
+    return response
 
 @router.post("/product-suggestions")
 def get_product_suggestions(
@@ -236,25 +278,32 @@ def get_product_suggestions(
 @router.post("/sales-analysis")
 def get_sales_analysis(
     business_id: UUID,
+    async_mode: bool = False,
     db: Session = Depends(get_db), 
     current_user: UserSchema = Depends(get_current_user)
 ):
     """Get AI-powered sales analysis for a business."""
-    # Check if business exists
+    from app.workers.tasks_ai import generate_sales_report
+    
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
     
-    # Check permissions
     require_business_permission(business_id, current_user, db)
     
+    if async_mode:
+        task = generate_sales_report.delay(str(business_id), "monthly")
+        return {
+            "job_id": task.id,
+            "status": "pending",
+            "message": "Sales analysis is being generated. Use GET /api/v1/ai/jobs/{job_id} to check status."
+        }
+    
     try:
-        # Get sales analysis from AI service
         analysis = ai_service.get_sales_analysis(
             business_id=str(business_id)
         )
         
-        # Save conversation
         conversation_data = {
             "user_id": current_user.id,
             "business_id": business_id,
@@ -279,4 +328,101 @@ def get_sales_analysis(
         raise HTTPException(
             status_code=500, 
             detail=f"Failed to get sales analysis: {str(e)}"
+        )
+
+@router.post("/recommend")
+def ai_recommend(
+    business_id: UUID,
+    query_text: Optional[str] = None,
+    limit: int = 5,
+    db: Session = Depends(get_db), 
+    current_user: UserSchema = Depends(get_current_user)
+):
+    from app.services_directory.vector_store import vector_store
+    from app.utils.ai_audit import log_ai_inference
+    import time
+    
+    business = db.query(Business).filter(Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+    
+    require_business_permission(business_id, current_user, db)
+    
+    start_time = time.time()
+    
+    try:
+        if not query_text:
+            query_text = f"Recommend products for {business.name}"
+        
+        similar_docs = vector_store.similarity_search(
+            query_text=query_text,
+            business_id=str(business_id),
+            limit=limit
+        )
+        
+        from app.services_directory.ai_service import ai_service
+        
+        context = "\n".join([doc.get("content", "") for doc in similar_docs])
+        recommendation_prompt = f"""Based on the following context about the business products:
+        
+{context}
+
+Generate product recommendations for: {query_text}"""
+        
+        ai_response = ai_service.process_query(
+            user_id=str(current_user.id),
+            business_id=str(business_id),
+            query_text=recommendation_prompt,
+            assistant_type=AIAssistantType.PRODUCT_SUGGESTION
+        )
+        
+        response_time_ms = int((time.time() - start_time) * 1000)
+        
+        log_ai_inference(
+            user_id=str(current_user.id),
+            business_id=str(business_id),
+            model_name="chromadb+gpt-3.5-turbo",
+            prompt=query_text,
+            response=ai_response.get("response", ""),
+            tokens_used=ai_response.get("tokens_used", 0),
+            response_time_ms=response_time_ms,
+            endpoint="/api/v1/ai/recommend"
+        )
+        
+        conversation_data = {
+            "user_id": current_user.id,
+            "business_id": business_id,
+            "assistant_type": AIAssistantType.PRODUCT_SUGGESTION,
+            "prompt": query_text,
+            "response": ai_response["response"],
+            "tokens_used": ai_response.get("tokens_used", 0),
+            "response_time_ms": response_time_ms
+        }
+        
+        conversation = AIConversationCRUD.create(db, conversation_data)
+        
+        return {
+            "business_id": str(business_id),
+            "query": query_text,
+            "recommendations": ai_response["response"],
+            "similar_products": similar_docs[:limit],
+            "conversation_id": str(conversation.id),
+            "response_time_ms": response_time_ms
+        }
+        
+    except Exception as e:
+        log_ai_inference(
+            user_id=str(current_user.id),
+            business_id=str(business_id),
+            model_name="chromadb+gpt-3.5-turbo",
+            prompt=query_text or "",
+            response="",
+            endpoint="/api/v1/ai/recommend",
+            status="error",
+            error_message=str(e)
+        )
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to generate recommendations: {str(e)}"
         )

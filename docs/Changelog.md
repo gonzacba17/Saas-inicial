@@ -4,6 +4,30 @@ Registro de cambios y progreso del desarrollo.
 
 ---
 
+## 2025-10-17 [feat] - Integración AI completada
+
+### Implementaciones:
+- **Endpoint AI Recommend**: POST `/api/v1/ai/recommend` con búsqueda semántica y recomendaciones contextualizadas
+- **Tests AI**: Suite de smoke tests en `backend/tests/test_ai_recommend.py` con 5 casos de prueba
+- **Monitoreo AI**: Script `ml/monitoring/collect_ai_metrics.py` para recolección de métricas de inferencia
+- **Documentación AI**: Guía completa en `docs/AI-INTEGRATION.md` con arquitectura, endpoints, y ejemplos
+
+### Características AI:
+- Búsqueda semántica con ChromaDB
+- Context-aware recommendations con GPT-3.5
+- Auditoría automática de inferencias en `ai_audit_logs`
+- Aislamiento multi-tenant en vector store
+- Workers asíncronos para análisis de ventas y recomendaciones
+- Feature extraction pipeline en `/ml/pipelines/`
+
+### Métricas y Monitoreo:
+- Exportación a formato Prometheus
+- KPIs de inferencia (throughput, latency, success rate)
+- Métricas por endpoint y modelo
+- Rastreo de errores y logs de auditoría
+
+---
+
 ## 2025-01-22 [docs] - Reorganización completa de documentación y roadmap
 
 ### Cambios realizados:

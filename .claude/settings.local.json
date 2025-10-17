@@ -84,7 +84,9 @@
       "Bash(test:*)",
       "Bash(diff:*)",
       "Bash(pyflakes:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(git pull:*)",
+      "Bash(docker:*)"
     ],
     "deny": []
   }
