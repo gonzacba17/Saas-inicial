@@ -13,7 +13,7 @@ email-validator==2.1.0.post1
 
 # ===== DATABASE =====
 sqlalchemy==2.0.35
-alembic==1.13.1
+alembic==1.17.0
 psycopg2-binary==2.9.9
 
 # ===== SECURITY =====
