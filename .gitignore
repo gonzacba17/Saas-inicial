@@ -29,17 +29,17 @@ ENV/
 
 # Environment variables (CRÍTICO - NUNCA SUBIR ESTOS ARCHIVOS)
 .env
-.env.local
-.env.production
-.env.staging
-.env.development
-.env.test
-*.env
+.env.*
 !.env.example
 !.env.*.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/.env.*.example
 
 # Secretos y configuraciones sensibles
 secrets/
+*.secret
 backups/
 backups/*.enc
 backups/*.json

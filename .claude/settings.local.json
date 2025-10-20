@@ -86,7 +86,9 @@
       "Bash(pyflakes:*)",
       "Bash(git check-ignore:*)",
       "Bash(git pull:*)",
-      "Bash(docker:*)"
+      "Bash(docker:*)",
+      "Bash(for file in *.py)",
+      "Bash(do echo \"=== $file ===\")"
     ],
     "deny": []
   }
